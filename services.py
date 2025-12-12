@@ -1,7 +1,7 @@
 import json
 import random
 import time
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from fastapi import HTTPException
 from openai import OpenAI
@@ -12,9 +12,15 @@ from models import MatchResult, Participant
 # 初始化 AI
 client = OpenAI(api_key=settings.API_KEY, base_url=settings.BASE_URL)
 
+# =========================================================
+#  Part 1: AI 语义分析 (带安全校验)
+# =========================================================
+
 
 def get_ai_score_matrix(participants: List[Participant]) -> List[Dict]:
-    """第一阶段：AI 语义分析 (保持不变)"""
+    """
+    第一阶段：AI 语义分析
+    """
     profiles_text = []
     for p in participants:
         quiz_summary = " | ".join(
@@ -48,180 +54,205 @@ def get_ai_score_matrix(participants: List[Participant]) -> List[Dict]:
             response_format={"type": "json_object"},
         )
 
-        # 1. 先把内容取出来
         content = response.choices[0].message.content
-
-        # 2. 只有当 content 不是 None 且不是空字符串时，才解析
         if not content:
             print("Warning: AI returned empty content.")
             return []
 
-        # 3. 现在解析是安全的
         result = json.loads(content)
         return result.get("matches", [])
+
     except Exception as e:
         print(f"AI Error: {e}")
         return []
 
 
 # =========================================================
-#  核心算法：自适应混合模因算法 (Adaptive Memetic Algorithm)
-#  结合了 GA (全局搜索) + LS (局部改良)
+#  Part 2: 自适应混合模因算法 (Memetic Algorithm)
+#  算法核心逻辑：GA (全局) + Local Search (局部)
 # =========================================================
 
 
 class Individual:
-    def __init__(self, chain, score):
+    def __init__(self, chain: List[int], score: int):
         self.chain = chain
         self.score = score
 
 
-def calc_score(chain, weights, n):
-    """O(N) 快速计算链条总分"""
+def calc_score(chain: List[int], weights: List[List[int]], n: int) -> int:
+    """O(N) 计算链条总分"""
     s = 0
     for i in range(n):
+        # chain[i] -> chain[i+1]
         s += weights[chain[i]][chain[(i + 1) % n]]
     return s
 
 
-def local_search(chain, weights, n):
+def local_search(chain: List[int], weights: List[List[int]], n: int) -> Individual:
     """
-    【教育阶段】局部搜索 (2-Opt)
-    利用文章结论：LS速度极快，用来快速改良子代
+    【局部改良】Swap Mutation 变种
+    尝试交换任意两个节点，如果分数变高就保留
     """
-    best_chain = chain[:]
-    best_score = calc_score(chain, weights, n)
+    current_chain = chain[:]
+    current_score = calc_score(current_chain, weights, n)
+
+    # 限制最大尝试次数，防止在平局情况下死循环
+    MAX_IMPROVE_STEPS = 50
+
     improved = True
+    step = 0
 
-    # 为了速度，限制 LS 的最大迭代轮数
-    limit = 50
-    count = 0
-
-    while improved and count < limit:
+    while improved and step < MAX_IMPROVE_STEPS:
         improved = False
-        count += 1
-        # 尝试交换任意两点
+        step += 1
+
+        # 尝试交换 i 和 j
         for i in range(n):
             for j in range(i + 1, n):
                 # 模拟交换
-                best_chain[i], best_chain[j] = best_chain[j], best_chain[i]
-                new_score = calc_score(best_chain, weights, n)
+                current_chain[i], current_chain[j] = current_chain[j], current_chain[i]
+                new_score = calc_score(current_chain, weights, n)
 
-                if new_score > best_score:
-                    best_score = new_score
+                if new_score > current_score:
+                    current_score = new_score
                     improved = True
+                    # 贪心策略：一旦发现更好的，立刻锁定，进入下一轮大循环
+                    # 这样比遍历完所有可能性更快
+                    break
                 else:
-                    # 撤销交换
-                    best_chain[i], best_chain[j] = best_chain[j], best_chain[i]
+                    # 没变好，换回去
+                    current_chain[i], current_chain[j] = (
+                        current_chain[j],
+                        current_chain[i],
+                    )
 
-    return Individual(best_chain, best_score)
+            if improved:
+                break
+
+    return Individual(current_chain, current_score)
 
 
-def crossover(parent1, parent2, weights, n):
+def crossover_ox1(
+    parent1: Individual, parent2: Individual, weights: List[List[int]], n: int
+) -> Individual:
     """
-    【繁衍阶段】PMX 交叉变种
-    保留父代的部分优秀片段
+    【繁衍】顺序交叉算子 (Order Crossover, OX1)
+    比简单的填充更安全，能保证生成的绝对是合法排列
     """
-    # 随机选择片段
-    start = random.randint(0, n - 2)
-    end = random.randint(start + 1, n - 1)
+    if n < 3:
+        # 如果人数太少，没法切片，直接返回变异后的父亲
+        return local_search(parent1.chain, weights, n)
 
-    # 继承父代1的片段
+    # 1. 随机选择两个切点
+    cx_point1 = random.randint(0, n - 2)
+    cx_point2 = random.randint(cx_point1 + 1, n - 1)
+
     child_chain = [-1] * n
-    child_chain[start:end] = parent1.chain[start:end]
 
-    # 填充父代2的基因 (保持顺序)
-    current_p2_idx = 0
+    # 2. 继承父代1的中间段
+    child_chain[cx_point1:cx_point2] = parent1.chain[cx_point1:cx_point2]
+
+    # 3. 用父代2的基因填补剩余空位 (保持父代2的相对顺序)
+    # 获取父代2中所有不在 child_chain 里的元素
+    p1_segment_set = set(child_chain[cx_point1:cx_point2])
+    available_genes = [x for x in parent2.chain if x not in p1_segment_set]
+
+    # 填补
+    current_gene_idx = 0
     for i in range(n):
         if child_chain[i] == -1:
-            while parent2.chain[current_p2_idx] in child_chain:
-                current_p2_idx += 1
-            child_chain[i] = parent2.chain[current_p2_idx]
+            child_chain[i] = available_genes[current_gene_idx]
+            current_gene_idx += 1
 
-    # 【关键创新】生下来的孩子立刻进行"教育"(局部搜索)
+    # 4. 生下来的孩子立刻进行“教育”
     return local_search(child_chain, weights, n)
 
 
-def solve_with_memetic_algorithm(n, weights):
-    """
-    混合模因算法主流程
-    """
-    POP_SIZE = 50  # 种群大小 (不用太大，因为有LS加速)
-    GENERATIONS = 100  # 迭代代数
-    ELITISM = 10  # 精英保留数量
+def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
+    """算法主入口"""
 
-    # 1. 初始化种群 (50% 随机, 50% 贪婪)
+    # 参数配置
+    POP_SIZE = 40  # 种群大小
+    GENERATIONS = 80  # 迭代代数
+    ELITISM = 5  # 精英保留数
+
+    # 1. 初始化种群
     population = []
 
-    # A. 随机个体
-    for _ in range(POP_SIZE // 2):
-        chain = list(range(n))
-        random.shuffle(chain)
-        # 即使是初始个体，也进行一次教育
-        population.append(local_search(chain, weights, n))
-
-    # B. 简单的贪婪生成 (保证起跑线高)
-    # 这里简单起见，再生成一批随机并优化的
-    for _ in range(POP_SIZE - len(population)):
+    # 为了保证起跑线，先生成一批随机解并立刻优化
+    for _ in range(POP_SIZE):
         chain = list(range(n))
         random.shuffle(chain)
         population.append(local_search(chain, weights, n))
 
-    # 按分数排序
+    # 排序
     population.sort(key=lambda x: x.score, reverse=True)
     best_global = population[0]
 
     # 2. 进化循环
+    no_improvement_count = 0
+
     for gen in range(GENERATIONS):
         new_pop = []
 
-        # A. 精英策略：直接保留最好的 N 个
+        # A. 精英保留
         new_pop.extend(population[:ELITISM])
 
-        # B. 繁衍下一代
+        # B. 繁衍
         while len(new_pop) < POP_SIZE:
-            # 锦标赛选择父母 (从随机3个里选最好的)
-            p1 = max(random.sample(population, 3), key=lambda x: x.score)
-            p2 = max(random.sample(population, 3), key=lambda x: x.score)
+            # 锦标赛选择：随机选3个，挑最好的做父母
+            candidates = random.sample(population, min(3, len(population)))
+            p1 = max(candidates, key=lambda x: x.score)
+            candidates = random.sample(population, min(3, len(population)))
+            p2 = max(candidates, key=lambda x: x.score)
 
-            # 交叉 + 变异(内部包含了LS)
-            child = crossover(p1, p2, weights, n)
+            child = crossover_ox1(p1, p2, weights, n)
             new_pop.append(child)
 
-        # 更新种群
+        # C. 更新种群
         population = new_pop
         population.sort(key=lambda x: x.score, reverse=True)
 
         # 记录最优
-        if population[0].score > best_global.score:
-            best_global = population[0]
+        current_best = population[0]
+        if current_best.score > best_global.score:
+            best_global = current_best
+            no_improvement_count = 0
+        else:
+            no_improvement_count += 1
 
-        # 3. 逃逸机制 (如果连续 10 代最优解没变，且还没满分)
-        # 简单实现：引入一批全新的随机血液
-        if gen % 10 == 0:
-            # 替换掉最差的 20%
-            idx = int(POP_SIZE * 0.8)
-            for i in range(idx, POP_SIZE):
+        # D. 逃逸机制 (如果 15 代都没有进步，说明陷入局部最优)
+        if no_improvement_count > 15:
+            # 引入"鲶鱼"：替换掉后 30% 的人口为纯随机新个体
+            replace_idx = int(POP_SIZE * 0.7)
+            for i in range(replace_idx, POP_SIZE):
                 chain = list(range(n))
                 random.shuffle(chain)
                 population[i] = local_search(chain, weights, n)
+            no_improvement_count = 0  # 重置计数器
 
     return best_global.chain
+
+
+# =========================================================
+#  Part 3: 业务调度入口
+# =========================================================
 
 
 def solve_gift_circle(
     participants: List[Participant], matches: List[Dict]
 ) -> List[MatchResult]:
-    if not matches:
-        raise HTTPException(status_code=500, detail="AI 未返回数据")
-
+    """
+    主调度函数 (兼容无AI情况)
+    """
     p_ids = [p.id for p in participants]
     n = len(p_ids)
 
-    # 1. 映射 ID
+    # 1. 映射 ID -> 0..n-1
     idx_map = {pid: i for i, pid in enumerate(p_ids)}
 
     # 2. 构建权重矩阵
+    # 默认全0
     weights = [[0] * n for _ in range(n)]
     raw_data_map = {}
 
@@ -236,11 +267,12 @@ def solve_gift_circle(
                 m.get("gift_short_name", "Gift"),
             )
 
-    # 3. 运行混合模因算法
+    # 3. 运行算法
     if n > 1:
+        # 这里是核心算法调用
         path_indices = solve_with_memetic_algorithm(n, weights)
     else:
-        path_indices = [0]
+        path_indices = [0]  # 只有一个人，虽然前端应该拦截
 
     # 4. 组装结果
     results = []
@@ -248,16 +280,26 @@ def solve_gift_circle(
 
     for i in range(n):
         u_idx = path_indices[i]
-        v_idx = path_indices[(i + 1) % n]
+        v_idx = path_indices[(i + 1) % n]  # 闭环连接
 
+        # 查原始数据
         data = raw_data_map.get((u_idx, v_idx))
-        if not data:
-            score, reason, gift = 0, "兜底匹配", "未知礼物"
-        else:
-            score, reason, gift = data
 
         giver = p_map[p_ids[u_idx]]
         receiver = p_map[p_ids[v_idx]]
+
+        # 兜底逻辑
+        if not data:
+            match_reason = (
+                "由于 AI 服务暂时不可用，系统已自动为您随机匹配最有缘的伙伴。"
+            )
+            # 尝试截取描述
+            desc = giver.gift_description
+            gift_summary = (
+                (desc[:15] + "...") if desc and len(desc) > 15 else (desc or "神秘礼物")
+            )
+        else:
+            _, match_reason, gift_summary = data
 
         results.append(
             MatchResult(
@@ -265,8 +307,8 @@ def solve_gift_circle(
                 giver_wechat=giver.wechat,
                 receiver_name=receiver.name,
                 receiver_wechat=receiver.wechat,
-                gift_summary=gift,
-                match_reason=reason,
+                gift_summary=gift_summary,
+                match_reason=match_reason,
             )
         )
 
