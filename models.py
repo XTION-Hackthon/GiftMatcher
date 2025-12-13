@@ -15,8 +15,8 @@ class Participant(BaseModel):
     email: str
     wechat: str
     mbti: str
-    gift_description: str     # 礼物的自然语言描述
-    quiz_data: List[QuizItem] # 问卷数据
+    gift_description: str
+    quiz_data: List[QuizItem]
 
 class MatchResult(BaseModel):
     """返回给前端的单个匹配结果"""

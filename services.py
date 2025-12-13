@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.API_KEY, base_url=settings.BASE_URL)
 
-# =========================================================
-#  数据结构校验 (Pydantic)
-# =========================================================
+#MARK: 数据结构校验 (Pydantic)
 
 class ScoreItem(BaseModel):
     gift_from_id: str
@@ -33,16 +31,18 @@ class StoryItem(BaseModel):
     match_reason: str
     gift_short_name: str
 
-# =========================================================
-#  Phase 1: 纯数值评分 (The Mathematician)
-# =========================================================
+#MARK: Phase 1: 纯数值评分 (The Mathematician)
 
 def get_numeric_score_matrix(participants: List[Participant]) -> List[List[int]]:
     n = len(participants)
     p_ids = [p.id for p in participants]
-    matrix = [[5] * n for _ in range(n)] # 默认 5 分
+    
+    # 默认低分设为 30
+    DEFAULT_LOW_SCORE = 30
+    matrix = [[DEFAULT_LOW_SCORE] * n for _ in range(n)] 
+    
     for i in range(n):
-        matrix[i][i] = 0 # 自环为 0
+        matrix[i][i] = 0 # 自环永远为 0
 
     gifts_context = "\n".join([f"ID: {p.id} | Gift: {p.gift_description}" for p in participants])
     BATCH_SIZE = 5
@@ -97,12 +97,17 @@ Rules:
             logger.error(f"Batch processing failed: {e}")
             continue
 
+    # 打印中间产物：评分矩阵
+    print("\n" + "="*40)
+    print("🔍 [DEBUG] Phase 1 - Score Matrix:")
+    print(f"   (Rows=Givers, Cols=Receivers, Default={DEFAULT_LOW_SCORE})")
+    for idx, row in enumerate(matrix):
+        print(f"   User {idx}: {row}")
+    print("="*40 + "\n")
+
     return matrix
 
-# =========================================================
-#  Phase 2: 自适应混合模因算法 (The Strategist)
-#  (此处恢复了完整的算法逻辑)
-# =========================================================
+#MARK: Phase 2: 自适应混合模因算法 (The Strategist)
 
 class Individual:
     def __init__(self, chain: List[int], score: int):
@@ -118,7 +123,7 @@ def calc_score(chain: List[int], weights: List[List[int]], n: int) -> int:
 def local_search(chain: List[int], weights: List[List[int]], n: int) -> Individual:
     current_chain = chain[:]
     current_score = calc_score(current_chain, weights, n)
-    MAX_STEPS = 50 # 局部搜索深度
+    MAX_STEPS = 50 
     
     improved = True
     step = 0
@@ -132,7 +137,7 @@ def local_search(chain: List[int], weights: List[List[int]], n: int) -> Individu
                 if new_score > current_score:
                     current_score = new_score
                     improved = True
-                    break # 贪心：一有改进立刻应用
+                    break 
                 else:
                     current_chain[i], current_chain[j] = current_chain[j], current_chain[i]
             if improved: break
@@ -163,10 +168,9 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
     if n < 2: return [0] if n==1 else []
 
     POP_SIZE = 40
-    GENERATIONS = 50 # 迭代代数
+    GENERATIONS = 50 
     ELITISM = 5
     
-    # 1. 初始化种群
     population = []
     for _ in range(POP_SIZE):
         c = list(range(n))
@@ -177,17 +181,13 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
     best_global = population[0]
     no_imp = 0
     
-    # 2. 进化
     for gen in range(GENERATIONS):
         new_pop = population[:ELITISM]
-        
         while len(new_pop) < POP_SIZE:
-            # 锦标赛选择
             pool = random.sample(population, min(3, len(population)))
             p1 = max(pool, key=lambda x: x.score)
             pool = random.sample(population, min(3, len(population)))
             p2 = max(pool, key=lambda x: x.score)
-            
             child = crossover_ox1(p1, p2, weights, n)
             new_pop.append(child)
             
@@ -200,7 +200,6 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
         else:
             no_imp += 1
             
-        # 逃逸机制
         if no_imp > 15:
             replace_idx = int(POP_SIZE * 0.7)
             for i in range(replace_idx, POP_SIZE):
@@ -211,22 +210,33 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
             
     return best_global.chain
 
-# =========================================================
-#  Phase 3: 纯文案生成 (The Writer)
-# =========================================================
+#MARK: Phase 3: 纯文案生成 (The Writer)
 
 def generate_stories_for_chain(chain_indices: List[int], participants: List[Participant]) -> List[MatchResult]:
     n = len(participants)
     results = []
     pairs_to_generate = []
     
+    # 打印中间产物：确定好的配对
+    debug_pairs_str = []
+
     for i in range(n):
         giver_idx = chain_indices[i]
         receiver_idx = chain_indices[(i + 1) % n]
+        g_obj = participants[giver_idx]
+        r_obj = participants[receiver_idx]
+        
         pairs_to_generate.append({
-            "giver": participants[giver_idx],
-            "receiver": participants[receiver_idx]
+            "giver": g_obj,
+            "receiver": r_obj
         })
+        debug_pairs_str.append(f"{g_obj.name} -> {r_obj.name}")
+
+    print("\n" + "="*40)
+    print("🔍 [DEBUG] Phase 3 - Selected Pairs for Story Generation:")
+    print(f"   Chain: {chain_indices}")
+    print(f"   Pairs: {', '.join(debug_pairs_str)}")
+    print("="*40 + "\n")
     
     BATCH_SIZE = 5
     logger.info(f"Phase 3: Generating stories for {n} pairs...")
@@ -292,17 +302,21 @@ Rules:
         
     return results
 
-# =========================================================
-#  Main Entrypoint
-# =========================================================
+#MARK: Main Entrypoint
 
 def solve_gift_circle(participants: List[Participant]) -> List[MatchResult]:
     if len(participants) < 2:
         return []
-    # 1. 获取分数
+    
+    # 1. 获取分数 (Phase 1)
     score_matrix = get_numeric_score_matrix(participants)
-    # 2. 算法求解
+    
+    # 2. 算法求解 (Phase 2)
+    # 打印算法前的确认信息
+    print(f"   >>> [DEBUG] Running Memetic Algorithm on {len(participants)}x{len(participants)} matrix...")
     best_chain_indices = solve_with_memetic_algorithm(len(participants), score_matrix)
-    # 3. 生成文案
+    
+    # 3. 生成文案 (Phase 3)
     final_results = generate_stories_for_chain(best_chain_indices, participants)
+    
     return final_results
