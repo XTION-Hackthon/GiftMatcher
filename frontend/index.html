@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Christmas Gift Exchange</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zcool+KuaiLe&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FFC247", // The golden yellow color from the screenshot borders/titles
+              secondary: "#FF4D6D", // The reddish pink accent
+              "background-light": "#FFFDF5", // Off-white/cream background
+              "background-dark": "#1F1D16", // Dark mode background
+              "card-light": "#FFF9E6", // Light yellowish card background
+              "card-dark": "#2D2A20", // Dark mode card background
+              "text-main": "#5D5D5D", // Dark gray text
+              "text-light": "#EAEAEA", // Light text for dark mode
+              
+              // Merged from code.html
+              "primary-red": "#E63946", // A nice vibrant Christmas red
+              "landing-light": "#FFFBE6", // Warm light yellow from code.html
+              "landing-dark": "#2A1B18", // Dark brownish background from code.html
+              "accent-yellow": "#F4E0A0",
+              "accent-brown": "#C4A470",
+              "accent-pink": "#F7CAC9",
+            },
+            fontFamily: {
+              display: ["'Zcool KuaiLe'", "cursive", "'Noto Sans SC'", "sans-serif"], // Playful font for titles
+              body: ["'Noto Sans SC'", "sans-serif"],
+              yakuhei: ["'汉仪雅酷黑'", "'Hanyi Yakuhei'", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              'xl': "1.5rem",
+              '2xl': "2rem",
+            },
+            boxShadow: {
+              'festive': '0 4px 14px 0 rgba(255, 194, 71, 0.39)',
+              'gift': '0 4px 14px 0 rgba(230, 57, 70, 0.39)',
+            }
+          },
+        },
+      };
+    </script>
+    <style>
+        .custom-radio:checked + div {
+            border-color: #FF4D6D;
+            background-color: #FFE6EA;
+        }
+        .dark .custom-radio:checked + div {
+            background-color: #4A202A;
+        }
+        .custom-radio:checked + div .radio-indicator {
+            background-color: #FF4D6D;
+            border-color: #FF4D6D;
+            box-shadow: inset 0 0 0 3px white;
+        }
+        .card-option.selected, .decoration-option.selected {
+            transform: scale(1.1);
+            border: 3px solid #FFC247;
+        }
+        .tree-bg {
+            position: fixed;
+            bottom: -50px;
+            right: -50px;
+            width: 300px;
+            height: 400px;
+            background-image: linear-gradient(to top left, #E6D5B8 0%, #E6D5B8 50%, transparent 50%),
+                              linear-gradient(to top right, #E6D5B8 0%, #E6D5B8 50%, transparent 50%);
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        
+        /* Merged animations from code.html */
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1.05); }
+            50% { transform: scale(1.15); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+        .animate-float {
+            animation: float 4s infinite ease-in-out;
+        }
+        .animate-spin-slow {
+            animation: spin-slow 20s linear infinite;
+        }
+        .gift-box-cross {
+            background-image: linear-gradient(to bottom, transparent 50%, rgba(230, 57, 70, 0.5) 50%), linear-gradient(to right, transparent 50%, rgba(230, 57, 70, 0.5) 50%);
+            background-size: 10px 10px, 10px 10px;
+        }
+        .dashed-border-h {
+            border-bottom: 2px dashed #E63946;
+            opacity: 0.6;
+        }
+        .dashed-border-v {
+            border-left: 2px dashed #E63946;
+            opacity: 0.6;
+        }
+        
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        
+        /* Scene transition helper */
+        .scene {
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Added styles for Scene 2 */
+        .text-stroke-white {
+            -webkit-text-stroke: 4px white;
+            paint-order: stroke fill;
+        }
+        .text-stroke-dark {
+             -webkit-text-stroke: 4px #2D1B1B;
+             paint-order: stroke fill;
+        }
+        .text-shadow-custom-light {
+             text-shadow: 2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+        }
+        .dark .text-shadow-custom-dark {
+             text-shadow: 2px 2px 0 #2D1B1B, -1px -1px 0 #2D1B1B, 1px -1px 0 #2D1B1B, -1px 1px 0 #2D1B1B, 1px 1px 0 #2D1B1B;
+        }
+        .blur-x {
+            filter: blur(8px);
+        }
+        .bg-pattern {
+            background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 60%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-body min-h-screen relative overflow-x-hidden selection:bg-secondary selection:text-white">
+
+    <!-- Scene 1: Landing Page (from code.html) -->
+    <div id="scene-landing" class="scene flex flex-col relative overflow-hidden text-gray-800 dark:text-gray-100">
+        <div class="absolute inset-0 w-full h-full z-0">
+            <img src="6d35f26545223a4891b9423c23dfc06e.png" class="w-full h-full object-cover" alt="Background">
+        </div>
+        
+        <main class="flex-grow flex flex-col items-center justify-center relative z-10 px-4 fixed inset-0 pointer-events-none">
+            <div class="relative group cursor-pointer animate-pulse-soft mb-16 pointer-events-auto">
+                <button onclick="showIntro()" class="relative w-48 h-48 flex items-center justify-center transform transition-transform scale-110 active:scale-105 hover:scale-[1.2] transition-all duration-300">
+                    <img src="89a7c0040b81807be5ee986bce01b3a4.png" alt="Start" class="absolute inset-0 w-full h-full object-contain drop-shadow-xl z-0">
+                    <span class="relative z-10 text-4xl font-bold text-white" style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
+                        开始
+                    </span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scene 2: Intro Page (from gift_home.html) -->
+    <div id="scene-intro" class="scene flex flex-col relative overflow-hidden text-gray-800 selection:bg-primary-red selection:text-white" style="display: none;">
+        <div class="fixed inset-0 w-full h-full z-[-1]">
+            <img src="background.png" class="w-full h-full object-cover" alt="Background">
+        </div>
+        
+        <div class="fixed inset-0 z-10 w-full h-full flex flex-col items-center justify-center px-6 pointer-events-none">
+            <div class="max-w-md w-full mx-auto pointer-events-auto">
+                <div class="space-y-8 text-center w-full">
+                <div class="text-xl md:text-2xl font-bold leading-relaxed space-y-1">
+                    <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">我们用 AI 算法模拟了一位</p>
+                    <p class="text-2xl md:text-3xl text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark scale-110 py-1">「AI 圣诞老人」</p>
+                    <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">帮你现场进行趣味性的礼物匹配</p>
+                </div>
+                <div class="text-lg md:text-xl font-bold leading-relaxed mt-6">
+                    <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">本程序仅供娱乐参考</p>
+                    <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">请带着轻松的心情参与</p>
+                </div>
+            </div>
+            <div class="mt-12">
+                 <button onclick="showMain()" class="bg-white dark:bg-zinc-800 border-[6px] border-primary-red/30 text-primary-red text-2xl py-3 px-12 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 font-bold tracking-widest">
+                    下一页
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scene 3: Main App (original index.html content) -->
+    <div id="scene-main" class="scene pb-20" style="display: none;">
+        <header class="p-6 flex justify-end items-center sticky top-0 z-50 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm">
+            <img alt="VibeHacks #02" class="h-10 transform rotate-1 drop-shadow-sm" src="vibehacks_logo.png"/>
+            <div class="ml-3 text-secondary font-yakuhei font-bold text-lg tracking-wider">
+                圣诞礼物派送
+            </div>
+        </header>
+        <main class="max-w-md mx-auto px-5 space-y-10 relative z-10 fixed inset-0 flex items-center justify-center pointer-events-none w-full" id="app-container">
+            <!-- Page 1 -->
+            <div id="page-1" class="page active space-y-4 pt-24 w-full pointer-events-auto">
+                <div class="bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-20">
+                    <img alt="decoration" class="absolute -top-6 -right-4 w-16 h-16 transform -rotate-[30deg] pointer-events-none z-10 drop-shadow-md" src="x_mark.png"/>
+                    <div class="mb-6">
+                        <p class="text-text-main dark:text-gray-300 font-yakuhei font-bold text-lg mb-2">
+                            为了那位与你素未谋面的圣诞伙伴，你为 TA 准备了怎样的一份小小小意呢？
+                        </p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-yakuhei">
+                            它是什么、颜色形状如何、主要用途是什么。越客观清晰，我们的匹配算法就能越准确地为它找到最合适的收礼人
+                        </p>
+                    </div>
+                    <textarea class="w-full h-20 bg-gray-100 dark:bg-zinc-800 border-2 border-gray-200 dark:border-zinc-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all resize-none dark:text-white" placeholder="在此输入..." id="gift-description"></textarea>
+                    <div class="mt-2 space-y-2 border-t border-primary/20 pt-4">
+                        <p class="text-sm font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 font-yakuhei">基础信息录入：</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input class="bg-white dark:bg-zinc-800 border border-primary/40 rounded-lg px-3 py-2 text-sm dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary" placeholder="参赛者名称" type="text" id="player-name"/>
+                            <input class="bg-white dark:bg-zinc-800 border border-primary/40 rounded-lg px-3 py-2 text-sm dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary" placeholder="邮箱" type="email" id="email"/>
+                            <select class="bg-white dark:bg-zinc-800 border border-primary/40 rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-none focus:border-primary appearance-none" id="mbti">
+                                <option value="" disabled selected>MBTI</option>
+                                <option value="INTJ">INTJ</option>
+                                <option value="INTP">INTP</option>
+                                <option value="ENTJ">ENTJ</option>
+                                <option value="ENTP">ENTP</option>
+                                <option value="INFJ">INFJ</option>
+                                <option value="INFP">INFP</option>
+                                <option value="ENFJ">ENFJ</option>
+                                <option value="ENFP">ENFP</option>
+                                <option value="ISTJ">ISTJ</option>
+                                <option value="ISFJ">ISFJ</option>
+                                <option value="ESTJ">ESTJ</option>
+                                <option value="ESFJ">ESFJ</option>
+                                <option value="ISTP">ISTP</option>
+                                <option value="ISFP">ISFP</option>
+                                <option value="ESTP">ESTP</option>
+                                <option value="ESFP">ESFP</option>
+                            </select>
+                            <input class="bg-white dark:bg-zinc-800 border border-primary/40 rounded-lg px-3 py-2 text-sm dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary" placeholder="微信号" type="text" id="wechat"/>
+                            <select class="bg-white dark:bg-zinc-800 border border-primary/40 rounded-lg px-3 py-2 text-sm dark:text-white focus:outline-none focus:border-primary appearance-none col-span-2" id="zodiac">
+                                <option value="" disabled selected>选择星座</option>
+                                <option value="白羊座">白羊座</option>
+                                <option value="金牛座">金牛座</option>
+                                <option value="双子座">双子座</option>
+                                <option value="巨蟹座">巨蟹座</option>
+                                <option value="狮子座">狮子座</option>
+                                <option value="处女座">处女座</option>
+                                <option value="天秤座">天秤座</option>
+                                <option value="天蝎座">天蝎座</option>
+                                <option value="射手座">射手座</option>
+                                <option value="摩羯座">摩羯座</option>
+                                <option value="水瓶座">水瓶座</option>
+                                <option value="双鱼座">双鱼座</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Navigation Button for Page 1 -->
+                    <div class="absolute bottom-4 right-4 flex gap-2">
+                        <button class="text-gray-400 dark:text-gray-600 cursor-not-allowed">
+                            <span class="material-icons-round text-4xl transform rotate-180">play_arrow</span>
+                        </button>
+                        <button class="text-primary hover:text-yellow-600 transition-colors" onclick="goToPage(2)">
+                            <span class="material-icons-round text-4xl">play_arrow</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pages 2-6 (Questions) -->
+            <div id="questions-container">
+                <!-- Will be populated by JS -->
+            </div>
+
+            <!-- Page 7 -->
+            <div id="page-7" class="page space-y-4 pb-12 pt-24 w-full pointer-events-auto">
+                <div class="bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-20">
+                    <img alt="decoration" class="absolute -top-6 -right-4 w-16 h-16 transform -rotate-[30deg] pointer-events-none z-10 drop-shadow-md" src="x_mark.png"/>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-gray-500 dark:text-gray-400 font-bold text-sm mb-3 font-yakuhei">选择你的卡面</h4>
+                            <div class="flex justify-between gap-2 overflow-x-auto pb-2">
+                                <button class="card-option w-16 h-12 rounded-lg bg-[#CBFDB0] border-2 border-[#52DB98] flex-shrink-0 shadow-sm"></button>
+                                <button class="card-option w-16 h-12 rounded-lg bg-[#FFCBE3] border-2 border-[#82DDF0] flex-shrink-0 shadow-sm"></button>
+                                <button class="card-option w-16 h-12 rounded-lg bg-[#FF7D7D] border-2 border-[#FDD96D] flex-shrink-0 shadow-sm selected"></button>
+                                <button class="card-option w-16 h-12 rounded-lg bg-[#9F6DFA] border-2 border-[#E789FF] flex-shrink-0 shadow-sm"></button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 dark:text-gray-400 font-bold text-sm mb-3 font-yakuhei">选择你的装饰</h4>
+                            <div class="flex justify-between items-center gap-2">
+                                <button class="decoration-option p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors transform hover:scale-110">
+                                    <span class="material-icons-round text-green-700 text-3xl">local_florist</span>
+                                </button>
+                                <button class="decoration-option p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors transform hover:scale-110">
+                                    <span class="material-icons-round text-yellow-400 text-3xl">auto_awesome</span>
+                                </button>
+                                <button class="decoration-option p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors transform hover:scale-110 selected">
+                                    <span class="material-icons-round text-red-500 text-4xl">favorite</span>
+                                </button>
+                                <button class="decoration-option p-2 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors transform hover:scale-110">
+                                    <span class="material-icons-round text-yellow-500 text-3xl">filter_vintage</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-gray-500 dark:text-gray-400 font-bold text-sm mb-3 font-yakuhei">输入祝福</h4>
+                            <div class="relative">
+                                <input class="w-full bg-white dark:bg-zinc-800 border-none rounded-xl py-4 pl-4 pr-12 shadow-inner text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600 focus:ring-2 focus:ring-primary" placeholder="祝你拥有美好的一天..." type="text" id="blessing-input"/>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Navigation Buttons for Page 7 -->
+                    <div class="absolute bottom-4 right-4 flex gap-2">
+                        <button class="text-primary hover:text-yellow-600 transition-colors" onclick="goToPage(6)">
+                            <span class="material-icons-round text-4xl transform rotate-180">play_arrow</span>
+                        </button>
+                        <button class="text-gray-400 dark:text-gray-600 cursor-not-allowed">
+                            <span class="material-icons-round text-4xl">play_arrow</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="w-full p-4 flex justify-center pb-8 mt-8">
+                    <button id="submit-btn" class="bg-primary text-white dark:text-background-dark font-yakuhei font-bold text-xl py-3 px-12 rounded-full shadow-lg hover:bg-yellow-500 transform hover:-translate-y-1 transition-all w-full max-w-xs flex items-center justify-center gap-2">
+                        <span id="submit-text">提交礼物</span>
+                        <span class="material-icons-round">card_giftcard</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+        <img alt="background decoration" class="fixed bottom-20 right-0 w-64 opacity-80 pointer-events-none z-0" src="tree_bg.png"/>
+    </div>
+
+    <!-- Scene 4: Success Page -->
+    <div id="scene-success" class="scene flex flex-col relative overflow-hidden" style="display: none;">
+        <div class="fixed inset-0 w-full h-full z-0">
+            <img src="624dbd172019ce18e5904f7508a03977.png" class="w-full h-full object-cover" alt="Success">
+        </div>
+    </div>
+
+    <script>
+        // Scene Navigation Logic
+        function showIntro() {
+            document.getElementById('scene-landing').style.display = 'none';
+            document.getElementById('scene-intro').style.display = 'flex';
+        }
+
+        function showMain() {
+            document.getElementById('scene-intro').style.display = 'none';
+            document.getElementById('scene-main').style.display = 'block';
+            // Ensure main app renders correctly
+            renderQuestionPages();
+            showPage(1);
+        }
+
+        function showSuccess() {
+            document.getElementById('scene-main').style.display = 'none';
+            document.getElementById('scene-success').style.display = 'flex';
+        }
+
+        const questions = [
+            {
+                question: "Q1. 准备装饰圣诞树了，你最想把哪一个挂在树顶最显眼的位置？",
+                options: [
+                    { text: "A. 一个发光的极简几何星星 ", value: "A" },
+                    { text: "B. 一个镶满水钻的金色天使 ", value: "B" },
+                    { text: "C. 一个软乎乎的手工羊毛毡玩偶 ", value: "C" },
+                    { text: "D. 一个复古的木质胡桃夹子 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q2. 圣诞夜窝在沙发上看电影，你手里一定要捧着哪种杯子喝热可可？",
+                options: [
+                    { text: "A. 经典的搪瓷大肚马克杯 ", value: "A" },
+                    { text: "B. 造型夸张的圣诞麋鹿头陶瓷杯 ", value: "B" },
+                    { text: "C. 双层不锈钢保温随行杯 ", value: "C" },
+                    { text: "D. 精致的骨瓷描金茶杯 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q3. 如果收到一张圣诞贺卡，你最希望它的风格是？",
+                options: [
+                    { text: "A. 大面积留白，只有一句“Merry Christmas” ", value: "A" },
+                    { text: "B. 只要打开就会弹出立体城堡和音乐 ", value: "B" },
+                    { text: "C. 画满卡通姜饼人和糖果的涂鸦 ", value: "C" },
+                    { text: "D. 用牛皮纸和火漆印章封缄的手写信 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q4. 出门参加圣诞派对，你会选择哪条围巾搭配？",
+                options: [
+                    { text: "A. 纯灰色的羊绒围巾 ", value: "A" },
+                    { text: "B. 有大毛球的红绿撞色针织围巾 ", value: "B" },
+                    { text: "C. 带有金属光泽的丝绸披肩 ", value: "C" },
+                    { text: "D. 黑色机能风防风面罩围脖 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q5. 此时窗外下雪了，你觉得哪种光线最能代表今晚的氛围？",
+                options: [
+                    { text: "A. 壁炉里跳动的橙色火光 ", value: "A" },
+                    { text: "B. 窗边清冷的蓝白色LED灯串 ", value: "B" },
+                    { text: "C. 绚丽多彩的霓虹灯招牌 ", value: "C" },
+                    { text: "D. 一盏仅照亮书本的阅读灯 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q6. 圣诞袜里塞进一个小礼物，你最希望摸到的是？",
+                options: [
+                    { text: "A. 一支大牌且包装精美的口红/香水 ", value: "A" },
+                    { text: "B. 一个最新款的无线蓝牙耳机 ", value: "B" },
+                    { text: "C. 一个毛茸茸的解压捏捏乐 ", value: "C" },
+                    { text: "D. 一块冰凉的限量版金属徽章 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q7. 如果要选一首圣诞背景音乐，你会循环播放哪首？",
+                options: [
+                    { text: "A. 80年代爵士乐黑胶唱片 ", value: "A" },
+                    { text: "B. 电子合成器制作的先锋音乐 ", value: "B" },
+                    { text: "C. 只有钢琴伴奏的纯音乐 ", value: "C" },
+                    { text: "D. 充满铃铛声的欢快儿歌 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q8. 圣诞大餐的最后一道甜点，你选哪一个？",
+                options: [
+                    { text: "A. 造型繁复的多层翻糖蛋糕 ", value: "A" },
+                    { text: "B. 朴实无华但管饱的全麦面包篮 ", value: "B" },
+                    { text: "C. 超可爱的草莓雪人奶油杯 ", value: "C" },
+                    { text: "D. 一块极简的黑巧克力切片 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q9. 朋友送你一件毛衣作为礼物，你希望它是？",
+                options: [
+                    { text: "A. 纯白色的高领细针织衫 ", value: "A" },
+                    { text: "B. 满印卡通图案的Oversize卫衣 ", value: "B" },
+                    { text: "C. 带有亮片和流苏的派对毛衣 ", value: "C" },
+                    { text: "D. 90年代风格的粗棒针麻花毛衣 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q10. 如果要送你一个放在桌面的摆件，你倾向于？",
+                options: [
+                    { text: "A. 一个透明的水晶雪花球 ", value: "A" },
+                    { text: "B. 一个多功能的桌面收纳盒 ", value: "B" },
+                    { text: "C. 一个木头雕刻的小驯鹿 ", value: "C" },
+                    { text: "D. 一只趴着的软胶懒蛋蛋 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q11. 挑选礼物包装纸时，你的第一直觉是选？",
+                options: [
+                    { text: "A. 哑光黑色纸配银色丝带 ", value: "A" },
+                    { text: "B. 镭射反光材质的彩色纸 ", value: "B" },
+                    { text: "C. 简单的棕色牛皮纸麻绳 ", value: "C" },
+                    { text: "D. 满是笑脸和爱心的粉色纸 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q12. 假如圣诞老人送你一款电子产品，你想要？",
+                options: [
+                    { text: "A. 一台复古的胶片相机 ", value: "A" },
+                    { text: "B. 最新款的高性能游戏主机 ", value: "B" },
+                    { text: "C. 一个小巧的电子宠物机 ", value: "C" },
+                    { text: "D. 一个极简设计的电子墨水屏阅读器 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q13. 此时此刻，你更愿意闻到哪种味道的香薰？",
+                options: [
+                    { text: "A. 清冷的雪松与薄荷味 ", value: "A" },
+                    { text: "B. 浓郁的肉桂苹果热红酒味 ", value: "B" },
+                    { text: "C. 甜甜的香草奶油味 ", value: "C" },
+                    { text: "D. 昂贵的沉香与皮革味 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q14. 看到一个巨大的礼物盒放在地毯上，你希望里面是？",
+                options: [
+                    { text: "A. 一个比人还大的泰迪熊 ", value: "A" },
+                    { text: "B. 一整套百科全书 ", value: "B" },
+                    { text: "C. 一个巨大的乐高城堡模型 ", value: "C" },
+                    { text: "D. 一棵挂满现金红包的树 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q15. 如果礼物是一件首饰，你偏爱？",
+                options: [
+                    { text: "A. 极细的银色素圈戒指 ", value: "A" },
+                    { text: "B. 夸张的各色宝石镶嵌项链 ", value: "B" },
+                    { text: "C. 编织绳串起的小铃铛手链 ", value: "C" },
+                    { text: "D. 钛钢材质的工业风粗链条 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q16. 圣诞夜出门看雪，你选择穿什么鞋？",
+                options: [
+                    { text: "A. 笨重的雪地靴 ", value: "A" },
+                    { text: "B. 精致的细高跟短靴 ", value: "B" },
+                    { text: "C. 经典的黑白帆布鞋 ", value: "C" },
+                    { text: "D. 限量联名款的高帮球鞋 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q17. 你更喜欢哪种材质的礼物触感？",
+                options: [
+                    { text: "A. 冰凉光滑的金属或玻璃 ", value: "A" },
+                    { text: "B. 温暖蓬松的长绒毛 ", value: "B" },
+                    { text: "C. 粗糙有质感的原木或石材 ", value: "C" },
+                    { text: "D. 细腻的高级丝绒 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q18. 假如可以收到一个家居用品，你选？",
+                options: [
+                    { text: "A. 一张极简线条的懒人沙发 ", value: "A" },
+                    { text: "B. 一张 ornate (装饰华丽) 的波斯地毯 ", value: "B" },
+                    { text: "C. 一个卡通形状的抱枕 ", value: "C" },
+                    { text: "D. 一个全自动扫地机器人 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q19. 你心目中完美的圣诞礼物的大小是？",
+                options: [
+                    { text: "A. 越小越好，比如一颗钻石 ", value: "A" },
+                    { text: "B. 越大越好，比如一套家具 ", value: "B" },
+                    { text: "C. 能够单手握住的精致小物 ", value: "C" },
+                    { text: "D. 抱个满怀的大玩偶 ", value: "D" },
+                ]
+            },
+            {
+                question: "Q20. 最后，如果必须用一个词形容你最期待的礼物风格？",
+                options: [
+                    { text: "A. Cool ", value: "A" },
+                    { text: "B. Cozy ", value: "B" },
+                    { text: "C. Fancy ", value: "C" },
+                    { text: "D. Useful ", value: "D" },
+                ]
+            },
+        ];
+
+        // 从20道题中随机抽取5道
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+        
+        // 随机选取5道题
+        const selectedQuestions = shuffleArray(questions).slice(0, 5);
+        
+        // 页面导航逻辑
+        let currentPage = 1;
+        const totalPages = 7;
+
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // Show target page
+            const target = document.getElementById(`page-${pageId}`);
+            if (target) {
+                target.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function goToPage(pageNumber) {
+            if (pageNumber >= 1 && pageNumber <= totalPages) {
+                currentPage = pageNumber;
+                showPage(currentPage);
+            }
+        }
+
+        // 渲染题目页面 (Pages 2-6)
+        function renderQuestionPages() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            
+            selectedQuestions.forEach((q, index) => {
+                const pageNum = index + 2; // Page 2 to 6
+                
+                const pageDiv = document.createElement('div');
+                pageDiv.id = `page-${pageNum}`;
+                pageDiv.className = 'page space-y-4 pt-24 w-full pointer-events-auto';
+                
+                const card = document.createElement('div');
+                card.className = 'bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-16';
+                
+                // Decoration
+                const decoration = document.createElement('img');
+                decoration.src = 'x_mark.png';
+                decoration.alt = 'decoration';
+                decoration.className = 'absolute -top-6 -right-4 w-16 h-16 transform -rotate-[30deg] pointer-events-none z-10 drop-shadow-md';
+                card.appendChild(decoration);
+                
+                // Question Title
+                const title = document.createElement('h3');
+                title.className = 'text-xl font-bold text-primary mb-6 font-yakuhei leading-relaxed';
+                // Replace original Q number with sequential number (Q1-Q5)
+                const cleanQuestion = q.question.replace(/^Q\d+\.\s*/, '');
+                title.textContent = `Q${index + 1}. ${cleanQuestion}`;
+                card.appendChild(title);
+                
+                // Options
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'space-y-3';
+                
+                q.options.forEach(opt => {
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center gap-3 cursor-pointer group';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = `q${index + 1}`;
+                    input.value = opt.value;
+                    input.className = 'hidden custom-radio';
+                    
+                    const indicatorDiv = document.createElement('div');
+                    indicatorDiv.className = 'w-6 h-6 rounded-full border-2 border-primary flex items-center justify-center transition-all group-hover:border-secondary bg-white dark:bg-zinc-800 flex-shrink-0';
+                    const innerDot = document.createElement('div');
+                    innerDot.className = 'w-3 h-3 rounded-full radio-indicator transition-all bg-transparent';
+                    indicatorDiv.appendChild(innerDot);
+                    
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'text-gray-700 dark:text-gray-300 font-medium group-hover:text-primary transition-colors text-sm';
+                    textSpan.textContent = opt.text;
+                    
+                    label.appendChild(input);
+                    label.appendChild(indicatorDiv);
+                    label.appendChild(textSpan);
+                    
+                    optionsDiv.appendChild(label);
+                });
+                
+                card.appendChild(optionsDiv);
+                
+                // Navigation Buttons
+                const navDiv = document.createElement('div');
+                navDiv.className = 'absolute bottom-4 right-4 flex gap-2';
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'text-primary hover:text-yellow-600 transition-colors';
+                prevBtn.onclick = () => goToPage(pageNum - 1);
+                prevBtn.innerHTML = '<span class="material-icons-round text-4xl transform rotate-180">play_arrow</span>';
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'text-primary hover:text-yellow-600 transition-colors';
+                nextBtn.onclick = () => goToPage(pageNum + 1);
+                nextBtn.innerHTML = '<span class="material-icons-round text-4xl">play_arrow</span>';
+                
+                navDiv.appendChild(prevBtn);
+                navDiv.appendChild(nextBtn);
+                
+                card.appendChild(navDiv);
+                pageDiv.appendChild(card);
+                container.appendChild(pageDiv);
+            });
+        }
+        
+        // 收集用户选择的5道题答案（原始文字内容）
+        function collectQuizAnswers() {
+            const answers = [];
+            
+            for (let i = 0; i < selectedQuestions.length; i++) {
+                const radio = document.querySelector(`input[name="q${i + 1}"]:checked`);
+                if (radio) {
+                    const question = selectedQuestions[i];
+                    const selectedOption = question.options.find(opt => opt.value === radio.value);
+                    if (selectedOption) {
+                        const qNum = question.question.split('.')[0];
+                        answers.push(`${qNum}: ${selectedOption.text.trim()}`);
+                    }
+                }
+            }
+            
+            // 按题目序号排序
+            answers.sort((a, b) => {
+                const numA = parseInt(a.match(/^Q(\d+)/)[1], 10);
+                const numB = parseInt(b.match(/^Q(\d+)/)[1], 10);
+                return numA - numB;
+            });
+
+            return answers.join("\n");
+        }
+
+        // Initialize Card and Decoration Selection
+        document.addEventListener('DOMContentLoaded', () => {
+            // Card Options
+            const cardOptions = document.querySelectorAll('.card-option');
+            cardOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    cardOptions.forEach(btn => btn.classList.remove('selected'));
+                    option.classList.add('selected');
+                });
+            });
+
+            // Decoration Options
+            const decorationOptions = document.querySelectorAll('.decoration-option');
+            decorationOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    decorationOptions.forEach(btn => btn.classList.remove('selected'));
+                    option.classList.add('selected');
+                });
+            });
+        });
+
+        // 收集所有表单数据
+        function collectFormData() {
+            // 获取选中的卡片
+            let selectedCard = "";
+            const cardOption = document.querySelector('.card-option.selected');
+            if (cardOption) {
+                // 提取背景颜色类名或样式
+                const classes = Array.from(cardOption.classList);
+                // 查找以 bg-[# 开头的类
+                const bgClass = classes.find(c => c.startsWith('bg-[#'));
+                selectedCard = bgClass || "默认";
+            }
+
+            // 获取选中的装饰
+            let selectedDecoration = "";
+            const decorationOption = document.querySelector('.decoration-option.selected');
+            if (decorationOption) {
+                // 提取内部 span 的 material icon 文本
+                const iconSpan = decorationOption.querySelector('span.material-icons-round');
+                if (iconSpan) {
+                    selectedDecoration = iconSpan.textContent.trim();
+                }
+            }
+
+            return {
+                "准备的礼物描述": document.getElementById("gift-description")?.value || "",
+                "选手名": document.getElementById("player-name")?.value || "",
+                "MBTI": document.getElementById("mbti")?.value || "",
+                "邮箱": document.getElementById("email")?.value || "",
+                "微信账号": document.getElementById("wechat")?.value || "",
+                "用户选择题的答案": collectQuizAnswers(),
+                "用户祝福话语": document.getElementById("blessing-input")?.value || "",
+                "用户星座": document.getElementById("zodiac")?.value || ""
+            };
+        }
+
+        // 验证表单
+        function validateForm(data) {
+            const requiredFields = ["准备的礼物描述", "选手名", "邮箱"];
+            for (const field of requiredFields) {
+                if (!data[field] || data[field].trim() === "") {
+                    return { valid: false, message: `请填写${field}` };
+                }
+            }
+            return { valid: true };
+        }
+
+        // 提交数据到后端代理
+        async function submitToFeishu(formData) {
+            const response = await fetch(`${API_BASE_URL}/api/submit`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            if (result.code !== 0) {
+                throw new Error("提交失败: " + result.msg);
+            }
+            return result;
+        }
+
+        // 更新按钮状态
+        function updateSubmitButton(state, message) {
+            const btn = document.getElementById("submit-btn");
+            const text = document.getElementById("submit-text");
+            
+            switch(state) {
+                case "loading":
+                    btn.disabled = true;
+                    btn.classList.add("opacity-50", "cursor-not-allowed");
+                    text.textContent = message || "提交中...";
+                    break;
+                case "cooldown":
+                    btn.disabled = true;
+                    btn.classList.add("opacity-50", "cursor-not-allowed");
+                    text.textContent = message || "请稍候...";
+                    break;
+                case "success":
+                    btn.disabled = false;
+                    btn.classList.remove("opacity-50", "cursor-not-allowed");
+                    btn.classList.add("bg-green-500");
+                    text.textContent = "提交成功！";
+                    setTimeout(() => {
+                        btn.classList.remove("bg-green-500");
+                        text.textContent = "提交礼物";
+                    }, 3000);
+                    break;
+                case "error":
+                    btn.disabled = false;
+                    btn.classList.remove("opacity-50", "cursor-not-allowed");
+                    btn.classList.add("bg-red-500");
+                    text.textContent = message || "提交失败";
+                    setTimeout(() => {
+                        btn.classList.remove("bg-red-500");
+                        text.textContent = "提交礼物";
+                    }, 3000);
+                    break;
+                default:
+                    btn.disabled = false;
+                    btn.classList.remove("opacity-50", "cursor-not-allowed");
+                    text.textContent = "提交礼物";
+            }
+        }
+
+        // 主提交函数（带5秒防抖）
+        async function handleSubmit() {
+            const now = Date.now();
+            
+            // 检查是否在冷却时间内
+            if (now - lastSubmitTime < SUBMIT_COOLDOWN) {
+                const remaining = Math.ceil((SUBMIT_COOLDOWN - (now - lastSubmitTime)) / 1000);
+                updateSubmitButton("cooldown", `请等待 ${remaining} 秒`);
+                return;
+            }
+            
+            // 检查是否正在提交
+            if (isSubmitting) {
+                return;
+            }
+            
+            // 收集并验证表单数据
+            const formData = collectFormData();
+            const validation = validateForm(formData);
+            
+            if (!validation.valid) {
+                alert(validation.message);
+                // If validation fails on page 1, go back to page 1
+                if (["准备的礼物描述", "选手名", "邮箱"].some(f => validation.message.includes(f.replace("请填写", "")))) {
+                     goToPage(1);
+                }
+                return;
+            }
+            
+            isSubmitting = true;
+            lastSubmitTime = now;
+            updateSubmitButton("loading");
+            
+            try {
+                await submitToFeishu(formData);
+                updateSubmitButton("success");
+                setTimeout(showSuccess, 1500);
+            } catch (error) {
+                console.error(error);
+                updateSubmitButton("error", error.message);
+            } finally {
+                isSubmitting = false;
+            }
+        }
+        
+        // 绑定提交按钮事件
+        const API_BASE_URL = ""; // Relative path for Vercel
+        let lastSubmitTime = 0;
+        const SUBMIT_COOLDOWN = 5000; // 5 seconds
+        let isSubmitting = false;
+
+        document.getElementById("submit-btn").addEventListener("click", handleSubmit);
+        
+        // 绑定卡片选择事件
+        document.querySelectorAll('.card-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.card-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+    </script>
+</body>
+</html>
