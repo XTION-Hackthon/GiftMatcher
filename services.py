@@ -53,19 +53,25 @@ def get_numeric_score_matrix(participants: List[Participant]) -> List[List[int]]
         batch = participants[i : i + BATCH_SIZE]
         receivers_context = "\n".join([
             f"ID: {p.id} | MBTI: {p.mbti} | Quiz: " + 
-            "|".join([f"{q.question_text[:5]}->{q.selected_option}" for q in p.quiz_data]) 
+            "|".join([f"{q.question_text[:10]}..->{q.selected_option}" for q in p.quiz_data]) 
             for p in batch
         ])
 
+        # 【升级】评分权重：50% MBTI + 50% 细节
         system_prompt = """
-You are a Scoring Engine. 
-Input: Receivers and Gifts.
-Task: Rate the compatibility (0-100) for each Receiver against ALL Gifts.
-Rules:
-1. Output JSON only.
-2. Structure: {"results": [{"receiver_id": "...", "scores": [{"gift_from_id": "...", "score": 88}, ...]}]}
-3. High score = Good personality match.
-4. Return Top 5 matches per receiver is enough.
+You are a Dual-Core Matching Engine.
+Input: Receivers (MBTI + Quiz) and Gifts.
+Task: Rate compatibility (0-100).
+
+SCORING WEIGHTS:
+1. **50% MBTI RESONANCE**: Does the gift fit their cognitive functions? (e.g., INTJ likes efficiency, ESFP likes sensory experiences).
+2. **50% LIFESTYLE FIT**: Does the gift specifically fit their Quiz Answers (Weekend habits/Vacation preferences)?
+3. **SCORING GUIDE**:
+   - **90-100**: Perfect Storm. Fits BOTH their MBTI type AND their specific quiz habit.
+   - **70-89**: Strong match. Fits one side perfectly, or both sides moderately.
+   - **< 60**: Weak match.
+4. Output JSON: {"results": [{"receiver_id": "...", "scores": [{"gift_from_id": "...", "score": 88}, ...]}]}
+5. Return Top 5 matches per receiver.
 """
         try:
             response = client.chat.completions.create(
@@ -97,12 +103,14 @@ Rules:
             logger.error(f"Batch processing failed: {e}")
             continue
 
-    # 打印中间产物：评分矩阵
+    # DEBUG: 打印评分矩阵
     print("\n" + "="*40)
     print("🔍 [DEBUG] Phase 1 - Score Matrix:")
     print(f"   (Rows=Givers, Cols=Receivers, Default={DEFAULT_LOW_SCORE})")
+    print(f"   Format: [Score_to_User0, Score_to_User1, ...]")
     for idx, row in enumerate(matrix):
-        print(f"   User {idx}: {row}")
+        name = participants[idx].name[:10].ljust(10)
+        print(f"   {name}: {row}")
     print("="*40 + "\n")
 
     return matrix
@@ -164,7 +172,6 @@ def crossover_ox1(parent1: Individual, parent2: Individual, weights: List[List[i
     return local_search(child_chain, weights, n)
 
 def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
-    """完整版 Memetic Algorithm 实现"""
     if n < 2: return [0] if n==1 else []
 
     POP_SIZE = 40
@@ -212,17 +219,52 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
 
 #MARK: Phase 3: 纯文案生成 (The Writer)
 
-def generate_stories_for_chain(chain_indices: List[int], participants: List[Participant]) -> List[MatchResult]:
+def generate_single_backup_reason(giver: Participant, receiver: Participant) -> Dict:
+    logger.info(f"⚡ Triggering backup generation for {giver.name} -> {receiver.name}")
+    
+    prompt = f"""
+Match: {giver.name} (Gift: {giver.gift_description}) -> {receiver.name} (MBTI: {receiver.mbti}, Quiz: {[q.selected_option for q in receiver.quiz_data]})
+
+Task: Write a match reason in Chinese.
+CRITICAL RULES:
+1. **INTEGRATE MBTI & DETAILS**: You CAN mention their MBTI (e.g. "As an ENTP..."), but you MUST connect it to specific gift features and quiz habits.
+2. **NO "ALTHOUGH...BUT..."**: Avoid adversative conjunctions. Use positive logic.
+3. Output JSON: {{"match_reason": "...", "gift_short_name": "..."}}
+"""
+    try:
+        response = client.chat.completions.create(
+            model=settings.MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        logger.error(f"Backup generation failed: {e}")
+        return {
+            "match_reason": "这是一次独特的跨界匹配，也许能带来意想不到的惊喜。", 
+            "gift_short_name": giver.gift_description[:10]
+        }
+
+def generate_stories_for_chain(
+    chain_indices: List[int], 
+    participants: List[Participant],
+    score_matrix: List[List[int]] 
+) -> List[MatchResult]:
+    
     n = len(participants)
     results = []
     pairs_to_generate = []
     
-    # 打印中间产物：确定好的配对
+    total_chain_score = 0
     debug_pairs_str = []
 
     for i in range(n):
         giver_idx = chain_indices[i]
         receiver_idx = chain_indices[(i + 1) % n]
+        
+        score = score_matrix[giver_idx][receiver_idx]
+        total_chain_score += score
+        
         g_obj = participants[giver_idx]
         r_obj = participants[receiver_idx]
         
@@ -230,12 +272,13 @@ def generate_stories_for_chain(chain_indices: List[int], participants: List[Part
             "giver": g_obj,
             "receiver": r_obj
         })
-        debug_pairs_str.append(f"{g_obj.name} -> {r_obj.name}")
+        debug_pairs_str.append(f"{g_obj.name}->{r_obj.name}(Score:{score})")
 
     print("\n" + "="*40)
-    print("🔍 [DEBUG] Phase 3 - Selected Pairs for Story Generation:")
-    print(f"   Chain: {chain_indices}")
-    print(f"   Pairs: {', '.join(debug_pairs_str)}")
+    print(f"🔍 [DEBUG] Phase 3 - Final Chain Analysis")
+    print(f"   Total Score: {total_chain_score}")
+    print(f"   Avg Score: {total_chain_score / n:.1f}")
+    print(f"   Details: {', '.join(debug_pairs_str)}")
     print("="*40 + "\n")
     
     BATCH_SIZE = 5
@@ -247,16 +290,22 @@ def generate_stories_for_chain(chain_indices: List[int], participants: List[Part
         context_lines = []
         for pair in batch_pairs:
             g, r = pair["giver"], pair["receiver"]
+            quiz_str = "|".join([q.selected_option for q in r.quiz_data])
             context_lines.append(
-                f"Pair: GiverID={g.id} (Gift: {g.gift_description}) -> ReceiverID={r.id} (MBTI: {r.mbti})"
+                f"Pair: GiverID={g.id} (Gift: {g.gift_description}) -> ReceiverID={r.id} (MBTI: {r.mbti} | Quiz: {quiz_str})"
             )
         
+        # 【升级】文案提示词：允许 MBTI，但必须结合细节
         system_prompt = """
-You are a Gift Storyteller.
-Task: Write a short, engaging reason for why this gift fits the receiver.
-Rules:
-1. Output JSON: {"stories": [{"giver_id": "...", "receiver_id": "...", "match_reason": "...", "gift_short_name": "..."}]}
-2. Be polite and creative.
+You are an insightful Gift Curator.
+Task: Write a clever, warm match reason (1-2 sentences, in Chinese).
+
+WRITING RULES:
+1. **MBTI ALLOWED BUT NOT ENOUGH**: You CAN mention their MBTI type, but you MUST explain *how* that type interacts with the **Specific Gift Feature** and their **Quiz Habit**.
+   - Bad: "You are an ENTP, so you will like this."
+   - Good: "As an ENTP with a love for experiments, this Nixie Tube clock perfectly feeds your curiosity and fits your lab-style weekend."
+2. **NO ADVERSATIVE CONJUNCTIONS**: Do NOT use "虽然", "尽管", "但是". Use positive bridging logic.
+3. Output JSON: {"stories": [{"giver_id": "...", "receiver_id": "...", "match_reason": "...", "gift_short_name": "..."}]}
 """
         try:
             response = client.chat.completions.create(
@@ -276,10 +325,9 @@ Rules:
                     except ValidationError:
                         continue
         except Exception as e:
-            logger.error(f"Story generation failed: {e}")
+            logger.error(f"Story generation batch failed: {e}")
             continue
 
-    # 组装
     for pair in pairs_to_generate:
         g, r = pair["giver"], pair["receiver"]
         story = story_map.get((g.id, r.id))
@@ -288,8 +336,9 @@ Rules:
             reason = story.match_reason
             gift_name = story.gift_short_name
         else:
-            reason = "这是一次神秘的匹配，也许冥冥之中自有天意。"
-            gift_name = (g.gift_description[:10] + "...") if g.gift_description else "Gift"
+            backup_data = generate_single_backup_reason(g, r)
+            reason = backup_data.get("match_reason", "Unique match")
+            gift_name = backup_data.get("gift_short_name", g.gift_description[:15])
 
         results.append(MatchResult(
             giver_name=g.name,
@@ -308,15 +357,11 @@ def solve_gift_circle(participants: List[Participant]) -> List[MatchResult]:
     if len(participants) < 2:
         return []
     
-    # 1. 获取分数 (Phase 1)
     score_matrix = get_numeric_score_matrix(participants)
     
-    # 2. 算法求解 (Phase 2)
-    # 打印算法前的确认信息
     print(f"   >>> [DEBUG] Running Memetic Algorithm on {len(participants)}x{len(participants)} matrix...")
     best_chain_indices = solve_with_memetic_algorithm(len(participants), score_matrix)
     
-    # 3. 生成文案 (Phase 3)
-    final_results = generate_stories_for_chain(best_chain_indices, participants)
+    final_results = generate_stories_for_chain(best_chain_indices, participants, score_matrix)
     
     return final_results
