@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
+import time
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -36,18 +37,26 @@ class FeishuTokenManager:
             "app_secret": self.app_secret
         }
         
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        
-        if data.get("code") != 0:
-            raise Exception(f"获取token失败: {data.get('msg')} (错误码: {data.get('code')})")
-        
-        self.tenant_access_token = data.get("tenant_access_token")
-        expire_seconds = data.get("expire", 7200)  # 默认2小时有效期
-        self.token_expire_time = datetime.now() + timedelta(seconds=expire_seconds)
-        print(f"✅ 成功获取新token，有效期至: {self.token_expire_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        return self.tenant_access_token
+        # Retry logic for token
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                
+                if data.get("code") != 0:
+                    raise Exception(f"获取token失败: {data.get('msg')} (错误码: {data.get('code')})")
+                
+                self.tenant_access_token = data.get("tenant_access_token")
+                expire_seconds = data.get("expire", 7200)  # 默认2小时有效期
+                self.token_expire_time = datetime.now() + timedelta(seconds=expire_seconds)
+                print(f"✅ 成功获取新token，有效期至: {self.token_expire_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                return self.tenant_access_token
+            except Exception as e:
+                print(f"⚠️ 获取Token失败 (尝试 {attempt+1}/3): {e}")
+                if attempt == 2:
+                    raise
+                time.sleep(1)
     
     def get_token(self) -> str:
         """获取有效的 tenant_access_token（自动刷新）"""
@@ -82,16 +91,35 @@ def submit_to_feishu():
             "Content-Type": "application/json"
         }
         
-        response = requests.post(url, json={"fields": form_data}, headers=headers)
-        result = response.json()
+        # Retry logic for submission
+        last_error = None
+        for attempt in range(3):
+            try:
+                # Add timeout to prevent hanging
+                response = requests.post(url, json={"fields": form_data}, headers=headers, timeout=15)
+                result = response.json()
+                
+                if result.get("code") != 0:
+                    # Business error, don't retry unless it's rate limit
+                    return jsonify({"code": result.get("code"), "msg": result.get("msg")}), 400
+                
+                return jsonify({"code": 0, "msg": "success", "data": result.get("data")})
+            
+            except requests.exceptions.ConnectionError as e:
+                print(f"⚠️ 连接错误 (尝试 {attempt+1}/3): {e}")
+                last_error = e
+                time.sleep(1)
+            except Exception as e:
+                print(f"⚠️ 提交异常 (尝试 {attempt+1}/3): {e}")
+                last_error = e
+                time.sleep(1)
         
-        if result.get("code") != 0:
-            return jsonify({"code": result.get("code"), "msg": result.get("msg")}), 400
-        
-        return jsonify({"code": 0, "msg": "success", "data": result.get("data")})
-    
+        # If we get here, all retries failed
+        raise last_error
+
     except Exception as e:
-        return jsonify({"code": -1, "msg": str(e)}), 500
+        print(f"❌ 最终提交失败: {e}")
+        return jsonify({"code": -1, "msg": f"提交失败: {str(e)}"}), 500
 
 if __name__ == '__main__':
     from flask import send_from_directory

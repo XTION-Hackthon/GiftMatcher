@@ -121,13 +121,23 @@
         }
         
         body {
-            min-height: max(884px, 100dvh);
+            height: 100dvh;
+            width: 100vw;
         }
         
         /* Scene transition helper */
         .scene {
             width: 100%;
-            min-height: 100vh;
+            height: 100%;
+        }
+        
+        /* Hide scrollbar */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         /* Added styles for Scene 2 */
@@ -153,65 +163,70 @@
         }
     </style>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-body min-h-screen relative overflow-x-hidden selection:bg-secondary selection:text-white">
+<body class="bg-black font-body h-screen w-screen overflow-hidden flex items-center justify-center selection:bg-secondary selection:text-white">
 
-    <!-- Scene 1: Landing Page (from code.html) -->
-    <div id="scene-landing" class="scene flex flex-col relative overflow-hidden text-gray-800 dark:text-gray-100">
-        <div class="absolute inset-0 w-full h-full z-0">
-            <img src="images/6d35f26545223a4891b9423c23dfc06e.png" class="w-full h-full object-cover" alt="Background">
-        </div>
+    <!-- Mobile Viewport Wrapper -->
+    <div id="mobile-viewport" class="relative w-full h-full bg-background-light dark:bg-background-dark overflow-hidden shadow-2xl" 
+         style="width: min(100vw, 56.25vh); height: min(100vh, 177.78vw);">
         
-        <main class="flex-grow flex flex-col items-center justify-center relative z-10 px-4 fixed inset-0 pointer-events-none">
-            <div class="relative group cursor-pointer animate-pulse-soft mb-16 pointer-events-auto">
-                <button onclick="showIntro()" class="relative w-48 h-48 flex items-center justify-center transform transition-transform scale-110 active:scale-105 hover:scale-[1.2] transition-all duration-300">
-                    <img src="images/89a7c0040b81807be5ee986bce01b3a4.png" alt="Start" class="absolute inset-0 w-full h-full object-contain drop-shadow-xl z-0">
-                    <span class="relative z-10 text-4xl font-bold text-white" style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
-                        开始
-                    </span>
-                </button>
+        <!-- Scene 1: Landing Page (from code.html) -->
+        <div id="scene-landing" class="scene flex flex-col relative w-full h-full overflow-hidden text-gray-800 dark:text-gray-100">
+            <div class="absolute inset-0 w-full h-full z-0">
+                <img src="images/6d35f26545223a4891b9423c23dfc06e.png" class="w-full h-full object-cover" alt="Background">
             </div>
-        </main>
-    </div>
+            
+            <main class="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
+                <!-- Centered Start Button -->
+                <div class="relative group cursor-pointer animate-pulse-soft pointer-events-auto z-10">
+                    <button onclick="showIntro()" class="relative w-48 h-48 flex items-center justify-center transform transition-transform scale-110 active:scale-105 hover:scale-[1.2] transition-all duration-300">
+                        <img src="images/89a7c0040b81807be5ee986bce01b3a4.png" alt="Start" class="absolute inset-0 w-full h-full object-contain drop-shadow-xl z-0">
+                        <span class="relative z-10 text-4xl font-bold text-white" style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">
+                            开始
+                        </span>
+                    </button>
+                </div>
+            </main>
+        </div>
 
-    <!-- Scene 2: Intro Page (from gift_home.html) -->
-    <div id="scene-intro" class="scene flex flex-col relative overflow-hidden text-gray-800 selection:bg-primary-red selection:text-white" style="display: none;">
-        <div class="fixed inset-0 w-full h-full z-[-1]">
-            <img src="images/background.png" class="w-full h-full object-cover" alt="Background">
-        </div>
-        
-        <div class="fixed inset-0 z-10 w-full h-full flex flex-col items-center justify-center px-6 pointer-events-none">
-            <div class="max-w-md w-full mx-auto pointer-events-auto">
-                <div class="space-y-8 text-center w-full">
-                <div class="text-xl md:text-2xl font-bold leading-relaxed space-y-1">
-                    <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">我们用 AI 算法模拟了一位</p>
-                    <p class="text-2xl md:text-3xl text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark scale-110 py-1">「AI 圣诞老人」</p>
-                    <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">帮你现场进行趣味性的礼物匹配</p>
+        <!-- Scene 2: Intro Page (from gift_home.html) -->
+        <div id="scene-intro" class="scene flex flex-col relative w-full h-full overflow-hidden text-gray-800 selection:bg-primary-red selection:text-white" style="display: none;">
+            <div class="absolute inset-0 w-full h-full z-0">
+                <img src="images/background.png" class="w-full h-full object-cover" alt="Background">
+            </div>
+            
+            <div class="absolute inset-0 z-10 w-full h-full flex flex-col items-center justify-center px-6 pointer-events-none">
+                <div class="max-w-md w-full mx-auto pointer-events-auto">
+                    <div class="space-y-8 text-center w-full">
+                    <div class="text-xl md:text-2xl font-bold leading-relaxed space-y-1">
+                        <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">我们用 AI 算法模拟了一位</p>
+                        <p class="text-2xl md:text-3xl text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark scale-110 py-1">「AI 圣诞老人」</p>
+                        <p class="text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark">帮你现场进行趣味性的礼物匹配</p>
+                    </div>
+                    <div class="text-lg md:text-xl font-bold leading-relaxed mt-6">
+                        <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">本程序仅供娱乐参考</p>
+                        <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">请带着轻松的心情参与</p>
+                    </div>
                 </div>
-                <div class="text-lg md:text-xl font-bold leading-relaxed mt-6">
-                    <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">本程序仅供娱乐参考</p>
-                    <p class="text-primary-red/70 dark:text-primary-red/80 text-shadow-custom-light dark:text-shadow-custom-dark">请带着轻松的心情参与</p>
+                <div class="mt-12 text-center">
+                     <button onclick="showMain()" class="bg-white dark:bg-zinc-800 border-[6px] border-primary-red/30 text-primary-red text-2xl py-3 px-12 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 font-bold tracking-widest">
+                        下一页
+                    </button>
+                </div>
                 </div>
             </div>
-            <div class="mt-12 text-center">
-                 <button onclick="showMain()" class="bg-white dark:bg-zinc-800 border-[6px] border-primary-red/30 text-primary-red text-2xl py-3 px-12 rounded-2xl shadow-lg hover:scale-105 transition-transform duration-200 font-bold tracking-widest">
-                    下一页
-                </button>
-            </div>
-            </div>
         </div>
-    </div>
 
     <!-- Scene 3: Main App (original index.html content) -->
-    <div id="scene-main" class="scene pb-20" style="display: none;">
-        <header class="p-6 flex justify-end items-center sticky top-0 z-50 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm">
+    <div id="scene-main" class="scene w-full h-full overflow-y-auto pb-20 scrollbar-hide" style="display: none;">
+        <header class="p-6 flex justify-end items-center sticky top-0 z-50 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm w-full">
             <img alt="VibeHacks #02" class="h-10 transform rotate-1 drop-shadow-sm" src="images/vibehacks_logo.png"/>
             <div class="ml-3 text-secondary font-yakuhei font-bold text-lg tracking-wider">
                 圣诞礼物派送
             </div>
         </header>
-        <main class="max-w-md mx-auto px-5 space-y-10 relative z-10 fixed inset-0 flex items-center justify-center pointer-events-none w-full" id="app-container">
+        <main class="max-w-md mx-auto px-5 space-y-10 relative z-10 w-full" id="app-container">
             <!-- Page 1 -->
-            <div id="page-1" class="page active space-y-4 pt-24 w-full pointer-events-auto">
+            <div id="page-1" class="page active space-y-4 pt-4 w-full pointer-events-auto">
                 <div class="bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-20">
                     <img alt="decoration" class="absolute -top-6 -right-4 w-16 h-16 transform -rotate-[30deg] pointer-events-none z-10 drop-shadow-md" src="images/x_mark.png"/>
                     <div class="mb-6">
@@ -283,7 +298,7 @@
             </div>
 
             <!-- Page 7 -->
-            <div id="page-7" class="page space-y-4 pb-12 pt-24 w-full pointer-events-auto">
+            <div id="page-7" class="page space-y-4 pb-12 pt-4 w-full pointer-events-auto">
                 <div class="bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-20">
                     <img alt="decoration" class="absolute -top-6 -right-4 w-16 h-16 transform -rotate-[30deg] pointer-events-none z-10 drop-shadow-md" src="images/x_mark.png"/>
                     <div class="space-y-6">
@@ -350,9 +365,22 @@
     </div>
 
     <!-- Scene 4: Success Page -->
-    <div id="scene-success" class="scene flex flex-col relative overflow-hidden" style="display: none;">
-        <div class="fixed inset-0 w-full h-full z-0">
+    <div id="scene-success" class="scene flex flex-col relative w-full h-full overflow-hidden" style="display: none;">
+        <div class="absolute inset-0 w-full h-full z-0">
             <img src="images/624dbd172019ce18e5904f7508a03977.png" class="w-full h-full object-cover" alt="Success">
+        </div>
+        <div class="absolute inset-0 z-10 w-full h-full flex flex-col items-center justify-center px-6 pointer-events-none">
+            <div class="max-w-md w-full mx-auto text-center space-y-4">
+                <p class="text-xl md:text-2xl font-bold text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark leading-relaxed">
+                    您的礼物已加入圣诞老人配送清单
+                </p>
+                <p class="text-xl md:text-2xl font-bold text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark leading-relaxed">
+                    请务必携带您的礼物到场
+                </p>
+                <p class="text-xl md:text-2xl font-bold text-primary-red text-shadow-custom-light dark:text-shadow-custom-dark leading-relaxed">
+                    来和大家交换呦～
+                </p>
+            </div>
         </div>
     </div>
 
@@ -360,6 +388,16 @@
     <audio id="bgm" loop preload="auto">
         <source src="bgm.mp3" type="audio/mpeg">
     </audio>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Santa Animation Container -->
+    <div id="scene-animation" class="absolute inset-0 z-50 hidden bg-black" style="width: 100%; height: 100%;">
+        <div id="canvas-container" class="w-full h-full"></div>
+    </div>
+    
+    </div> <!-- End of Mobile Viewport -->
 
     <script>
         // Background Music Control
@@ -635,7 +673,7 @@
                 
                 const pageDiv = document.createElement('div');
                 pageDiv.id = `page-${pageNum}`;
-                pageDiv.className = 'page space-y-4 pt-24 w-full pointer-events-auto';
+                pageDiv.className = 'page space-y-4 pt-4 w-full pointer-events-auto';
                 
                 const card = document.createElement('div');
                 card.className = 'bg-card-light dark:bg-card-dark rounded-3xl p-6 relative shadow-festive pb-16';
@@ -796,6 +834,23 @@
                     return { valid: false, message: `请填写${field}` };
                 }
             }
+
+            // Check if all 5 questions are answered
+            const answers = data["用户选择题的答案"].split("\n").filter(a => a.trim() !== "");
+            if (answers.length < 5) {
+                return { valid: false, message: "请回答所有5道选择题" };
+            }
+
+            // Check card selection
+            if (!data["选择卡面"]) {
+                return { valid: false, message: "请选择一个卡面" };
+            }
+
+            // Check decoration selection
+            if (!data["选择装饰"]) {
+                return { valid: false, message: "请选择一个装饰" };
+            }
+
             return { valid: true };
         }
 
@@ -895,7 +950,8 @@
             try {
                 await submitToFeishu(formData);
                 updateSubmitButton("success");
-                setTimeout(showSuccess, 1500);
+                // Play Santa Animation before showing success page
+                startSantaAnimation();
             } catch (error) {
                 console.error(error);
                 updateSubmitButton("error", error.message);
@@ -919,6 +975,397 @@
                 this.classList.add('selected');
             });
         });
+
+        // Santa Animation Logic
+        let scene, camera, renderer;
+        let snowSystem, santaGroup, trailSystem;
+        let reindeerLegs = []; 
+        let clock = new THREE.Clock();
+        let animationId;
+
+        function startSantaAnimation() {
+            // Hide main scene
+            document.getElementById('scene-main').style.display = 'none';
+            // Show animation container
+            const animContainer = document.getElementById('scene-animation');
+            animContainer.classList.remove('hidden');
+            
+            initSantaScene();
+            
+            // Set timeout to end animation and show success page
+            setTimeout(() => {
+                stopSantaAnimation();
+                animContainer.classList.add('hidden');
+                showSuccess();
+            }, 6000); // Play for 6 seconds
+        }
+
+        function stopSantaAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            // Cleanup logic if needed (e.g., remove event listeners)
+            window.removeEventListener('resize', onSantaWindowResize);
+            
+            // Optional: Clear scene to free memory if the user might restart flow without reload
+            // For now, simple stop is enough as we move to success page
+        }
+
+        function initSantaScene() {
+            const container = document.getElementById('canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000510, 0.002);
+
+            camera = new THREE.PerspectiveCamera(60, width / height, 1, 2000);
+            camera.position.set(0, 20, 150);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(width, height);
+            renderer.setClearColor(0x000510);
+            
+            // Clear previous canvas if any
+            container.innerHTML = '';
+            container.appendChild(renderer.domElement);
+
+            reindeerLegs = []; // Reset legs array
+            createSnow();
+            createSantaTeam();
+            createGround();
+
+            window.addEventListener('resize', onSantaWindowResize, false);
+
+            animateSanta();
+        }
+
+        function onSantaWindowResize() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function getTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const context = canvas.getContext('2d');
+            
+            const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, 32, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        function createSnow() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const count = 6000;
+
+            for (let i = 0; i < count; i++) {
+                const x = Math.random() * 2000 - 1000;
+                const y = Math.random() * 1000 - 500;
+                const z = Math.random() * 2000 - 1000;
+                vertices.push(x, y, z);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 4,
+                map: getTexture(),
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            snowSystem = new THREE.Points(geometry, material);
+            scene.add(snowSystem);
+        }
+
+        function createSantaTeam() {
+            santaGroup = new THREE.Group();
+            const particleTexture = getTexture();
+            const sleighGeo = new THREE.BufferGeometry();
+            const sleighPos = [];
+            const sleighColors = [];
+            
+            const addParticlesInBox = (count, bounds, colorObj) => {
+                const c = new THREE.Color(colorObj);
+                for(let i=0; i<count; i++) {
+                    const x = bounds.x + (Math.random() - 0.5) * bounds.w;
+                    const y = bounds.y + (Math.random() - 0.5) * bounds.h;
+                    const z = bounds.z + (Math.random() - 0.5) * bounds.d;
+                    sleighPos.push(x, y, z);
+                    sleighColors.push(c.r, c.g, c.b);
+                }
+            };
+
+            // 1. Sleigh
+            addParticlesInBox(3000, {x: 0, y: 0, z: 0, w: 25, h: 10, d: 15}, 0xff0000);
+            addParticlesInBox(600, {x: 0, y: -6, z: 6, w: 30, h: 2, d: 2}, 0xffd700);
+            addParticlesInBox(600, {x: 0, y: -6, z: -6, w: 30, h: 2, d: 2}, 0xffd700);
+
+            // 2. Santa
+            addParticlesInBox(1500, {x: -2, y: 8, z: 0, w: 10, h: 12, d: 10}, 0xff0000);
+            addParticlesInBox(500, {x: -2, y: 16, z: 0, w: 6, h: 6, d: 6}, 0xffcccc);
+            addParticlesInBox(600, {x: 2, y: 15, z: 0, w: 4, h: 6, d: 6}, 0xffffff);
+            addParticlesInBox(500, {x: -3, y: 20, z: 0, w: 8, h: 4, d: 6}, 0xff0000);
+            
+            // 3. Extra Large Gift Box
+            const boxCenter = {x: -16, y: 9, z: 0};
+            addParticlesInBox(3000, {x: boxCenter.x, y: boxCenter.y, z: boxCenter.z, w: 18, h: 18, d: 18}, 0xffffff);
+            addParticlesInBox(600, {x: boxCenter.x, y: boxCenter.y, z: boxCenter.z, w: 19, h: 19, d: 3}, 0xff0000);
+            addParticlesInBox(600, {x: boxCenter.x, y: boxCenter.y, z: boxCenter.z, w: 3, h: 19, d: 19}, 0xff0000);
+            const bowY = boxCenter.y + 10;
+            addParticlesInBox(300, {x: boxCenter.x, y: bowY, z: -3, w: 4, h: 7, d: 3}, 0xff0000);
+            addParticlesInBox(300, {x: boxCenter.x, y: bowY, z: 3, w: 4, h: 7, d: 3}, 0xff0000);
+            addParticlesInBox(150, {x: boxCenter.x, y: bowY - 1, z: 0, w: 3, h: 3, d: 3}, 0xff0000);
+
+            // 4. Reindeer Body
+            const createReindeerBody = (offsetX, offsetZ) => {
+                addParticlesInBox(800, {x: offsetX, y: 0, z: offsetZ, w: 15, h: 8, d: 6}, 0x8b5a2b);
+                addParticlesInBox(400, {x: offsetX + 8, y: 6, z: offsetZ, w: 6, h: 6, d: 5}, 0x8b5a2b);
+                addParticlesInBox(100, {x: offsetX + 11, y: 6, z: offsetZ, w: 2, h: 2, d: 2}, 0xff0000);
+                const antlerColor = 0xf0e68c; 
+                addParticlesInBox(60, {x: offsetX + 6, y: 11, z: offsetZ - 2, w: 2, h: 8, d: 1}, antlerColor);
+                addParticlesInBox(30, {x: offsetX + 8, y: 10, z: offsetZ - 2, w: 4, h: 1, d: 1}, antlerColor);
+                addParticlesInBox(30, {x: offsetX + 5, y: 13, z: offsetZ - 2, w: 3, h: 3, d: 1}, antlerColor);
+                addParticlesInBox(60, {x: offsetX + 6, y: 11, z: offsetZ + 2, w: 2, h: 8, d: 1}, antlerColor);
+                addParticlesInBox(30, {x: offsetX + 8, y: 10, z: offsetZ + 2, w: 4, h: 1, d: 1}, antlerColor);
+                addParticlesInBox(30, {x: offsetX + 5, y: 13, z: offsetZ + 2, w: 3, h: 3, d: 1}, antlerColor);
+            };
+
+            createReindeerBody(40, 6);
+            createReindeerBody(40, -6);
+            createReindeerBody(70, 6);
+            createReindeerBody(70, -6);
+
+            // Reins
+            addParticlesInBox(500, {x: 35, y: 2, z: 0, w: 50, h: 1, d: 14}, 0xffffaa);
+
+            // Build Mesh
+            sleighGeo.setAttribute('position', new THREE.Float32BufferAttribute(sleighPos, 3));
+            sleighGeo.setAttribute('color', new THREE.Float32BufferAttribute(sleighColors, 3));
+            const sleighMat = new THREE.PointsMaterial({
+                size: 1.5,
+                vertexColors: true,
+                map: particleTexture,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const sleighSystem = new THREE.Points(sleighGeo, sleighMat);
+            santaGroup.add(sleighSystem);
+
+            // 5. Reindeer Legs
+            const createLeg = (baseX, baseY, baseZ, phaseOffset) => {
+                const legGroup = new THREE.Group();
+                legGroup.position.set(baseX, baseY, baseZ); 
+
+                const legGeo = new THREE.BufferGeometry();
+                const legPos = [];
+                for(let i=0; i<200; i++) { 
+                    const x = (Math.random() - 0.5) * 2;
+                    const y = (Math.random() * -6);
+                    const z = (Math.random() - 0.5) * 2;
+                    legPos.push(x, y, z);
+                }
+                legGeo.setAttribute('position', new THREE.Float32BufferAttribute(legPos, 3));
+                
+                const legMat = new THREE.PointsMaterial({
+                    color: 0x8b5a2b, 
+                    size: 1.5,
+                    map: particleTexture,
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                const legPoints = new THREE.Points(legGeo, legMat);
+                legGroup.add(legPoints);
+                santaGroup.add(legGroup);
+
+                reindeerLegs.push({
+                    mesh: legGroup,
+                    phase: phaseOffset
+                });
+            };
+
+            const addLegsForReindeer = (rx, rz) => {
+                createLeg(rx + 5, -3, rz - 2, 0); 
+                createLeg(rx + 5, -3, rz + 2, Math.PI); 
+                createLeg(rx - 5, -3, rz - 2, Math.PI); 
+                createLeg(rx - 5, -3, rz + 2, 0); 
+            };
+
+            addLegsForReindeer(40, 6);
+            addLegsForReindeer(40, -6);
+            addLegsForReindeer(70, 6);
+            addLegsForReindeer(70, -6);
+
+            // 6. Magic Trail
+            const trailGeo = new THREE.BufferGeometry();
+            const trailPos = [];
+            const trailCount = 1500; 
+            for(let i=0; i<trailCount; i++) trailPos.push(0, -1000, 0); 
+            trailGeo.setAttribute('position', new THREE.Float32BufferAttribute(trailPos, 3));
+            
+            const trailMat = new THREE.PointsMaterial({
+                color: 0xffff00,
+                size: 2,
+                map: particleTexture,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+            trailSystem = new THREE.Points(trailGeo, trailMat);
+            
+            trailSystem.userData = {
+                particles: [], 
+                spawnTimer: 0
+            };
+            
+            for(let i=0; i<trailCount; i++) {
+                trailSystem.userData.particles.push({
+                    x: 0, y: -1000, z: 0,
+                    vx: 0, vy: 0, vz: 0,
+                    life: 0, maxLife: 0
+                });
+            }
+            scene.add(trailSystem);
+
+            // Initial Position
+            santaGroup.position.set(-250, 10, 0);
+            scene.add(santaGroup);
+        }
+
+        function createGround() {
+            const geo = new THREE.BufferGeometry();
+            const pos = [];
+            for(let i=0; i<500; i++) {
+                pos.push(
+                    (Math.random() - 0.5) * 1000,
+                    -50 + (Math.random() * 10),
+                    (Math.random() - 0.5) * 600
+                );
+            }
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({
+                color: 0xaaeeff,
+                size: 2,
+                transparent: true,
+                opacity: 0.3
+            });
+            const ground = new THREE.Points(geo, mat);
+            scene.add(ground);
+        }
+
+        function animateSanta() {
+            animationId = requestAnimationFrame(animateSanta);
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            if (snowSystem) {
+                const positions = snowSystem.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] -= 15 * delta;
+                    positions[i-1] -= 5 * delta; 
+
+                    if (positions[i] < -200) {
+                        positions[i] = 200;
+                        positions[i-1] = Math.random() * 2000 - 1000;
+                        positions[i+1] = Math.random() * 2000 - 1000;
+                    }
+                }
+                snowSystem.geometry.attributes.position.needsUpdate = true;
+                snowSystem.rotation.y = time * 0.02;
+            }
+
+            if (santaGroup) {
+                santaGroup.position.x += 80 * delta;
+                santaGroup.position.y = 10 + Math.sin(time * 2) * 5;
+                santaGroup.rotation.z = Math.sin(time * 3) * 0.05;
+
+                if (santaGroup.position.x > 250) {
+                    santaGroup.position.x = -250;
+                }
+            }
+
+            const runSpeed = 15; 
+            const runAmp = 0.5;  
+            reindeerLegs.forEach(legData => {
+                legData.mesh.rotation.z = Math.sin(time * runSpeed + legData.phase) * runAmp;
+            });
+
+            if (trailSystem && santaGroup) {
+                const positions = trailSystem.geometry.attributes.position.array;
+                const data = trailSystem.userData.particles;
+                
+                trailSystem.userData.spawnTimer += delta;
+                
+                let spawnCount = 15;
+                for(let k=0; k<data.length; k++) {
+                    const p = data[k];
+                    
+                    if (p.life <= 0 && spawnCount > 0) {
+                        const offsetX = (Math.random() - 0.5) * 10;
+                        const offsetY = (Math.random() - 0.5) * 5;
+                        const offsetZ = (Math.random() - 0.5) * 10;
+                        
+                        p.x = santaGroup.position.x - 15 + offsetX;
+                        p.y = santaGroup.position.y + offsetY;
+                        p.z = santaGroup.position.z + offsetZ;
+                        
+                        p.vx = -((Math.random() * 10) + 10);
+                        p.vy = (Math.random() - 0.5) * 5;
+                        p.vz = (Math.random() - 0.5) * 5;
+                        
+                        p.life = 1.0;
+                        p.maxLife = 1.0;
+                        
+                        spawnCount--;
+                    }
+                    
+                    if (p.life > 0) {
+                        p.x += p.vx * delta;
+                        p.y += p.vy * delta;
+                        p.z += p.vz * delta;
+                        p.life -= delta * 0.8; 
+                        
+                        positions[k*3] = p.x;
+                        positions[k*3+1] = p.y;
+                        positions[k*3+2] = p.z;
+                    } else {
+                        positions[k*3] = 0;
+                        positions[k*3+1] = -5000;
+                        positions[k*3+2] = 0;
+                    }
+                }
+                trailSystem.geometry.attributes.position.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
 
     </script>
 </body>
