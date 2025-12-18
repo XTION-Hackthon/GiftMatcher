@@ -31,6 +31,27 @@ class StoryItem(BaseModel):
     match_reason: str
     gift_short_name: str
 
+#MARK: Helper: 检查是否有有效的 MBTI
+
+def has_valid_mbti(mbti: str) -> bool:
+    """检查 MBTI 是否有效（非空且不是占位符）"""
+    if not mbti:
+        return False
+    mbti_upper = mbti.upper().strip()
+    # 无效的 MBTI 值
+    invalid_values = {"", "无", "未知", "不知道", "没有", "N/A", "NA", "NONE", "NULL", "-", "未填写"}
+    if mbti_upper in invalid_values:
+        return False
+    # 检查是否是有效的 MBTI 类型格式（4个字母）
+    valid_mbti_types = {
+        "INTJ", "INTP", "ENTJ", "ENTP",
+        "INFJ", "INFP", "ENFJ", "ENFP",
+        "ISTJ", "ISFJ", "ESTJ", "ESFJ",
+        "ISTP", "ISFP", "ESTP", "ESFP"
+    }
+    return mbti_upper in valid_mbti_types
+
+
 #MARK: Phase 1: 纯数值评分 (The Mathematician)
 
 def get_numeric_score_matrix(participants: List[Participant]) -> List[List[int]]:
@@ -51,24 +72,35 @@ def get_numeric_score_matrix(participants: List[Participant]) -> List[List[int]]
 
     for i in range(0, n, BATCH_SIZE):
         batch = participants[i : i + BATCH_SIZE]
-        receivers_context = "\n".join([
-            f"ID: {p.id} | MBTI: {p.mbti} | Quiz: " + 
-            "|".join([f"{q.question_text[:10]}..->{q.selected_option}" for q in p.quiz_data]) 
-            for p in batch
-        ])
+        
+        # 根据是否有 MBTI 构建不同的上下文
+        receivers_context_lines = []
+        for p in batch:
+            quiz_str = "|".join([f"{q.question_text[:10]}..->{q.selected_option}" for q in p.quiz_data])
+            if has_valid_mbti(p.mbti):
+                receivers_context_lines.append(f"ID: {p.id} | MBTI: {p.mbti} | Quiz: {quiz_str}")
+            else:
+                receivers_context_lines.append(f"ID: {p.id} | MBTI: [未提供] | Quiz: {quiz_str}")
+        receivers_context = "\n".join(receivers_context_lines)
 
-        # 【升级】评分权重：50% MBTI + 50% 细节
+        # 【升级】评分权重：根据是否有 MBTI 动态调整
+        # 如果有 MBTI: 50% MBTI + 50% Quiz
+        # 如果无 MBTI: 100% Quiz（生活方式匹配）
         system_prompt = """
 You are a Dual-Core Matching Engine.
 Input: Receivers (MBTI + Quiz) and Gifts.
 Task: Rate compatibility (0-100).
 
 SCORING WEIGHTS:
-1. **50% MBTI RESONANCE**: Does the gift fit their cognitive functions? (e.g., INTJ likes efficiency, ESFP likes sensory experiences).
-2. **50% LIFESTYLE FIT**: Does the gift specifically fit their Quiz Answers (Weekend habits/Vacation preferences)?
+1. **For receivers WITH MBTI**:
+   - 50% MBTI RESONANCE: Does the gift fit their cognitive functions? (e.g., INTJ likes efficiency, ESFP likes sensory experiences).
+   - 50% LIFESTYLE FIT: Does the gift specifically fit their Quiz Answers (Weekend habits/Vacation preferences)?
+2. **For receivers WITHOUT MBTI (marked as [未提供])**:
+   - 100% LIFESTYLE FIT: Focus entirely on Quiz Answers to determine compatibility.
+   - Analyze their preferences, habits, and lifestyle from quiz responses.
 3. **SCORING GUIDE**:
-   - **90-100**: Perfect Storm. Fits BOTH their MBTI type AND their specific quiz habit.
-   - **70-89**: Strong match. Fits one side perfectly, or both sides moderately.
+   - **90-100**: Perfect Storm. Excellent fit based on available data.
+   - **70-89**: Strong match. Good alignment with preferences.
    - **< 60**: Weak match.
 4. Output JSON: {"results": [{"receiver_id": "...", "scores": [{"gift_from_id": "...", "score": 88}, ...]}]}
 5. Return Top 5 matches per receiver.
@@ -222,12 +254,21 @@ def solve_with_memetic_algorithm(n: int, weights: List[List[int]]) -> List[int]:
 def generate_single_backup_reason(giver: Participant, receiver: Participant) -> Dict:
     logger.info(f"⚡ Triggering backup generation for {giver.name} -> {receiver.name}")
     
+    # 根据是否有 MBTI 构建不同的提示词
+    has_mbti = has_valid_mbti(receiver.mbti)
+    if has_mbti:
+        receiver_info = f"MBTI: {receiver.mbti}, Quiz: {[q.selected_option for q in receiver.quiz_data]}"
+        mbti_rule = '1. **INTEGRATE MBTI & DETAILS**: You CAN mention their MBTI (e.g. "As an ENTP..."), but you MUST connect it to specific gift features and quiz habits.'
+    else:
+        receiver_info = f"Quiz: {[q.selected_option for q in receiver.quiz_data]}"
+        mbti_rule = '1. **FOCUS ON LIFESTYLE**: Since no MBTI is provided, focus entirely on their quiz answers and lifestyle preferences to explain the match.'
+    
     prompt = f"""
-Match: {giver.name} (Gift: {giver.gift_description}) -> {receiver.name} (MBTI: {receiver.mbti}, Quiz: {[q.selected_option for q in receiver.quiz_data]})
+Match: {giver.name} (Gift: {giver.gift_description}) -> {receiver.name} ({receiver_info})
 
 Task: Write a match reason in Chinese.
 CRITICAL RULES:
-1. **INTEGRATE MBTI & DETAILS**: You CAN mention their MBTI (e.g. "As an ENTP..."), but you MUST connect it to specific gift features and quiz habits.
+{mbti_rule}
 2. **NO "ALTHOUGH...BUT..."**: Avoid adversative conjunctions. Use positive logic.
 3. Output JSON: {{"match_reason": "...", "gift_short_name": "..."}}
 """
@@ -291,21 +332,29 @@ def generate_stories_for_chain(
         for pair in batch_pairs:
             g, r = pair["giver"], pair["receiver"]
             quiz_str = "|".join([q.selected_option for q in r.quiz_data])
-            context_lines.append(
-                f"Pair: GiverID={g.id} (Gift: {g.gift_description}) -> ReceiverID={r.id} (MBTI: {r.mbti} | Quiz: {quiz_str})"
-            )
+            # 根据是否有 MBTI 构建不同的上下文
+            if has_valid_mbti(r.mbti):
+                context_lines.append(
+                    f"Pair: GiverID={g.id} (Gift: {g.gift_description}) -> ReceiverID={r.id} (MBTI: {r.mbti} | Quiz: {quiz_str})"
+                )
+            else:
+                context_lines.append(
+                    f"Pair: GiverID={g.id} (Gift: {g.gift_description}) -> ReceiverID={r.id} (MBTI: [未提供] | Quiz: {quiz_str})"
+                )
         
-        # 【升级】文案提示词：允许 MBTI，但必须结合细节
+        # 【升级】文案提示词：根据是否有 MBTI 动态调整
         system_prompt = """
 You are an insightful Gift Curator.
 Task: Write a clever, warm match reason (1-2 sentences, in Chinese).
 
 WRITING RULES:
-1. **MBTI ALLOWED BUT NOT ENOUGH**: You CAN mention their MBTI type, but you MUST explain *how* that type interacts with the **Specific Gift Feature** and their **Quiz Habit**.
+1. **FOR RECEIVERS WITH MBTI**: You CAN mention their MBTI type, but you MUST explain *how* that type interacts with the **Specific Gift Feature** and their **Quiz Habit**.
    - Bad: "You are an ENTP, so you will like this."
    - Good: "As an ENTP with a love for experiments, this Nixie Tube clock perfectly feeds your curiosity and fits your lab-style weekend."
-2. **NO ADVERSATIVE CONJUNCTIONS**: Do NOT use "虽然", "尽管", "但是". Use positive bridging logic.
-3. Output JSON: {"stories": [{"giver_id": "...", "receiver_id": "...", "match_reason": "...", "gift_short_name": "..."}]}
+2. **FOR RECEIVERS WITHOUT MBTI (marked as [未提供])**: Focus entirely on their quiz answers and lifestyle preferences. Do NOT mention MBTI at all.
+   - Good: "Based on your love for cozy weekends at home, this warm blanket will be your perfect companion."
+3. **NO ADVERSATIVE CONJUNCTIONS**: Do NOT use "虽然", "尽管", "但是". Use positive bridging logic.
+4. Output JSON: {"stories": [{"giver_id": "...", "receiver_id": "...", "match_reason": "...", "gift_short_name": "..."}]}
 """
         try:
             response = client.chat.completions.create(
