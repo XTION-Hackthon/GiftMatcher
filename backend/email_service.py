@@ -161,37 +161,56 @@ class EmailService:
             logger.warning("收件人邮箱为空，跳过发送")
             return False
         
+        import ssl
+        server = None
+        
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = f"{self.sender_name} <{self.sender_email}>"
+            msg['From'] = self.sender_email  # QQ邮箱要求From必须是发件邮箱
             msg['To'] = to_email
             
             html_part = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(html_part)
             
-            # 根据端口选择连接方式
-            # 465端口使用SSL，587端口使用TLS
+            # 优先使用 TLS (587)，更稳定；SSL (465) 作为备选
             if self.smtp_port == 587:
-                # TLS方式（Outlook/Office365）
-                with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                    server.ehlo()
+                server = smtplib.SMTP(self.smtp_host, 587, timeout=30)
+                server.starttls()
+            elif self.smtp_port == 465:
+                # 先尝试 SSL，失败则回退到 TLS
+                try:
+                    context = ssl.create_default_context()
+                    server = smtplib.SMTP_SSL(self.smtp_host, 465, context=context, timeout=30)
+                except ssl.SSLError:
+                    server = smtplib.SMTP(self.smtp_host, 587, timeout=30)
                     server.starttls()
-                    server.ehlo()
-                    server.login(self.smtp_user, self.smtp_password)
-                    server.sendmail(self.sender_email, to_email, msg.as_string())
             else:
-                # SSL方式（QQ/163等）
-                with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port) as server:
-                    server.login(self.smtp_user, self.smtp_password)
-                    server.sendmail(self.sender_email, to_email, msg.as_string())
+                server = smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=30)
+                server.starttls()
+            
+            server.login(self.smtp_user, self.smtp_password)
+            server.sendmail(self.sender_email, to_email, msg.as_string())
             
             logger.info(f"✅ 邮件发送成功: {to_email}")
             return True
             
-        except Exception as e:
-            logger.error(f"❌ 邮件发送失败 ({to_email}): {e}")
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"❌ 邮件发送失败 ({to_email}): 认证失败 - {e}")
             return False
+        except smtplib.SMTPException as e:
+            logger.error(f"❌ 邮件发送失败 ({to_email}): SMTP错误 - {e}")
+            return False
+        except Exception as e:
+            logger.error(f"❌ 邮件发送失败 ({to_email}): {type(e).__name__} - {e}")
+            return False
+        finally:
+            # 确保关闭连接
+            if server:
+                try:
+                    server.quit()
+                except:
+                    pass
 
     def send_match_notifications(
         self, 
@@ -208,6 +227,8 @@ class EmailService:
         Returns:
             发送结果统计 {"success": int, "failed": int, "skipped": int}
         """
+        import time
+        
         # 构建 name -> email 映射
         email_map = {p.name: p.email for p in participants}
         
@@ -219,6 +240,7 @@ class EmailService:
             
             # 发送给送礼人
             if giver_email:
+                logger.info(f"准备发送送礼通知给 {match.giver_name} ({giver_email})")
                 giver_content = self._create_giver_email_content(match, receiver_email)
                 if self.send_email(
                     giver_email, 
@@ -228,12 +250,15 @@ class EmailService:
                     stats["success"] += 1
                 else:
                     stats["failed"] += 1
+                # 添加延迟避免频率限制
+                time.sleep(1)
             else:
                 logger.warning(f"送礼人 {match.giver_name} 没有邮箱，跳过")
                 stats["skipped"] += 1
             
             # 发送给收礼人
             if receiver_email:
+                logger.info(f"准备发送收礼通知给 {match.receiver_name} ({receiver_email})")
                 receiver_content = self._create_receiver_email_content(match, giver_email)
                 if self.send_email(
                     receiver_email, 
@@ -243,6 +268,8 @@ class EmailService:
                     stats["success"] += 1
                 else:
                     stats["failed"] += 1
+                # 添加延迟避免频率限制
+                time.sleep(1)
             else:
                 logger.warning(f"收礼人 {match.receiver_name} 没有邮箱，跳过")
                 stats["skipped"] += 1
