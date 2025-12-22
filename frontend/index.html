@@ -826,145 +826,151 @@
             };
         }
 
-        // 验证表单
-        function validateForm(data) {
-            const requiredFields = ["准备的礼物描述", "选手名", "邮箱"];
-            for (const field of requiredFields) {
-                if (!data[field] || data[field].trim() === "") {
-                    return { valid: false, message: `请填写${field}` };
-                }
-            }
+        // 验证表单 - 已注释，不再进行验证
+        // function validateForm(data) {
+        //     const requiredFields = ["准备的礼物描述", "选手名", "邮箱"];
+        //     for (const field of requiredFields) {
+        //         if (!data[field] || data[field].trim() === "") {
+        //             return { valid: false, message: `请填写${field}` };
+        //         }
+        //     }
 
-            // Check if all 5 questions are answered
-            const answers = data["用户选择题的答案"].split("\n").filter(a => a.trim() !== "");
-            if (answers.length < 5) {
-                return { valid: false, message: "请回答所有5道选择题" };
-            }
+        //     // Check if all 5 questions are answered
+        //     const answers = data["用户选择题的答案"].split("\n").filter(a => a.trim() !== "");
+        //     if (answers.length < 5) {
+        //         return { valid: false, message: "请回答所有5道选择题" };
+        //     }
 
-            // Check card selection
-            if (!data["选择卡面"]) {
-                return { valid: false, message: "请选择一个卡面" };
-            }
+        //     // Check card selection
+        //     if (!data["选择卡面"]) {
+        //         return { valid: false, message: "请选择一个卡面" };
+        //     }
 
-            // Check decoration selection
-            if (!data["选择装饰"]) {
-                return { valid: false, message: "请选择一个装饰" };
-            }
+        //     // Check decoration selection
+        //     if (!data["选择装饰"]) {
+        //         return { valid: false, message: "请选择一个装饰" };
+        //     }
 
-            return { valid: true };
-        }
+        //     return { valid: true };
+        // }
 
-        // 提交数据到后端代理
-        async function submitToFeishu(formData) {
-            const response = await fetch(`${API_BASE_URL}/api/submit`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(formData)
-            });
-            
-            const result = await response.json();
-            if (result.code !== 0) {
-                throw new Error("提交失败: " + result.msg);
-            }
-            return result;
-        }
+        // 提交数据到后端代理 - 已注释，不再提交到飞书
+        // async function submitToFeishu(formData) {
+        //     const response = await fetch(`${API_BASE_URL}/api/submit`, {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-Type": "application/json"
+        //         },
+        //         body: JSON.stringify(formData)
+        //     });
+        //     
+        //     const result = await response.json();
+        //     if (result.code !== 0) {
+        //         throw new Error("提交失败: " + result.msg);
+        //     }
+        //     return result;
+        // }
 
-        // 更新按钮状态
-        function updateSubmitButton(state, message) {
-            const btn = document.getElementById("submit-btn");
-            const text = document.getElementById("submit-text");
-            
-            switch(state) {
-                case "loading":
-                    btn.disabled = true;
-                    btn.classList.add("opacity-50", "cursor-not-allowed");
-                    text.textContent = message || "提交中...";
-                    break;
-                case "cooldown":
-                    btn.disabled = true;
-                    btn.classList.add("opacity-50", "cursor-not-allowed");
-                    text.textContent = message || "请稍候...";
-                    break;
-                case "success":
-                    btn.disabled = false;
-                    btn.classList.remove("opacity-50", "cursor-not-allowed");
-                    btn.classList.add("bg-green-500");
-                    text.textContent = "提交成功！";
-                    setTimeout(() => {
-                        btn.classList.remove("bg-green-500");
-                        text.textContent = "提交礼物";
-                    }, 3000);
-                    break;
-                case "error":
-                    btn.disabled = false;
-                    btn.classList.remove("opacity-50", "cursor-not-allowed");
-                    btn.classList.add("bg-red-500");
-                    text.textContent = message || "提交失败";
-                    setTimeout(() => {
-                        btn.classList.remove("bg-red-500");
-                        text.textContent = "提交礼物";
-                    }, 3000);
-                    break;
-                default:
-                    btn.disabled = false;
-                    btn.classList.remove("opacity-50", "cursor-not-allowed");
-                    text.textContent = "提交礼物";
-            }
-        }
+        // 更新按钮状态 - 已注释，不再需要
+        // function updateSubmitButton(state, message) {
+        //     const btn = document.getElementById("submit-btn");
+        //     const text = document.getElementById("submit-text");
+        //     
+        //     switch(state) {
+        //         case "loading":
+        //             btn.disabled = true;
+        //             btn.classList.add("opacity-50", "cursor-not-allowed");
+        //             text.textContent = message || "提交中...";
+        //             break;
+        //         case "cooldown":
+        //             btn.disabled = true;
+        //             btn.classList.add("opacity-50", "cursor-not-allowed");
+        //             text.textContent = message || "请稍候...";
+        //             break;
+        //         case "success":
+        //             btn.disabled = false;
+        //             btn.classList.remove("opacity-50", "cursor-not-allowed");
+        //             btn.classList.add("bg-green-500");
+        //             text.textContent = "提交成功！";
+        //             setTimeout(() => {
+        //                 btn.classList.remove("bg-green-500");
+        //                 text.textContent = "提交礼物";
+        //             }, 3000);
+        //             break;
+        //         case "error":
+        //             btn.disabled = false;
+        //             btn.classList.remove("opacity-50", "cursor-not-allowed");
+        //             btn.classList.add("bg-red-500");
+        //             text.textContent = message || "提交失败";
+        //             setTimeout(() => {
+        //                 btn.classList.remove("bg-red-500");
+        //                 text.textContent = "提交礼物";
+        //             }, 3000);
+        //             break;
+        //         default:
+        //             btn.disabled = false;
+        //             btn.classList.remove("opacity-50", "cursor-not-allowed");
+        //             text.textContent = "提交礼物";
+        //     }
+        // }
 
-        // 主提交函数（带5秒防抖）
-        async function handleSubmit() {
-            const now = Date.now();
-            
-            // 检查是否在冷却时间内
-            if (now - lastSubmitTime < SUBMIT_COOLDOWN) {
-                const remaining = Math.ceil((SUBMIT_COOLDOWN - (now - lastSubmitTime)) / 1000);
-                updateSubmitButton("cooldown", `请等待 ${remaining} 秒`);
-                return;
-            }
-            
-            // 检查是否正在提交
-            if (isSubmitting) {
-                return;
-            }
-            
-            // 收集并验证表单数据
-            const formData = collectFormData();
-            const validation = validateForm(formData);
-            
-            if (!validation.valid) {
-                alert(validation.message);
-                // If validation fails on page 1, go back to page 1
-                if (["准备的礼物描述", "选手名", "邮箱"].some(f => validation.message.includes(f.replace("请填写", "")))) {
-                     goToPage(1);
-                }
-                return;
-            }
-            
-            isSubmitting = true;
-            lastSubmitTime = now;
-            updateSubmitButton("loading");
-            
-            try {
-                await submitToFeishu(formData);
-                updateSubmitButton("success");
-                // Play Santa Animation before showing success page
-                startSantaAnimation();
-            } catch (error) {
-                console.error(error);
-                updateSubmitButton("error", error.message);
-            } finally {
-                isSubmitting = false;
-            }
+        // 主提交函数 - 简化为直接播放动画
+        function handleSubmit() {
+            // 不再进行验证和提交到飞书，直接播放圣诞老人动画
+            startSantaAnimation();
         }
         
+        // 以下代码已注释 - 原有的防抖和验证逻辑
+        // async function handleSubmit() {
+        //     const now = Date.now();
+        //     
+        //     // 检查是否在冷却时间内
+        //     if (now - lastSubmitTime < SUBMIT_COOLDOWN) {
+        //         const remaining = Math.ceil((SUBMIT_COOLDOWN - (now - lastSubmitTime)) / 1000);
+        //         updateSubmitButton("cooldown", `请等待 ${remaining} 秒`);
+        //         return;
+        //     }
+        //     
+        //     // 检查是否正在提交
+        //     if (isSubmitting) {
+        //         return;
+        //     }
+        //     
+        //     // 收集并验证表单数据
+        //     const formData = collectFormData();
+        //     const validation = validateForm(formData);
+        //     
+        //     if (!validation.valid) {
+        //         alert(validation.message);
+        //         // If validation fails on page 1, go back to page 1
+        //         if (["准备的礼物描述", "选手名", "邮箱"].some(f => validation.message.includes(f.replace("请填写", "")))) {
+        //              goToPage(1);
+        //         }
+        //         return;
+        //     }
+        //     
+        //     isSubmitting = true;
+        //     lastSubmitTime = now;
+        //     updateSubmitButton("loading");
+        //     
+        //     try {
+        //         await submitToFeishu(formData);
+        //         updateSubmitButton("success");
+        //         // Play Santa Animation before showing success page
+        //         startSantaAnimation();
+        //     } catch (error) {
+        //         console.error(error);
+        //         updateSubmitButton("error", error.message);
+        //     } finally {
+        //         isSubmitting = false;
+        //     }
+        // }
+        
         // 绑定提交按钮事件
-        const API_BASE_URL = ""; // Relative path for Vercel
-        let lastSubmitTime = 0;
-        const SUBMIT_COOLDOWN = 5000; // 5 seconds
-        let isSubmitting = false;
+        // const API_BASE_URL = ""; // Relative path for Vercel - 已注释
+        // let lastSubmitTime = 0; // 已注释
+        // const SUBMIT_COOLDOWN = 5000; // 5 seconds - 已注释
+        // let isSubmitting = false; // 已注释
 
         document.getElementById("submit-btn").addEventListener("click", handleSubmit);
         
